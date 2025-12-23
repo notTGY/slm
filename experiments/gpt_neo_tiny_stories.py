@@ -42,8 +42,8 @@ def main(max_steps=-1):
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neo-125M")
 
-    dataset = TinyStories(tokenizer)
-    train_dataloader = DataLoader(dataset, num_workers=7)
+    dataset = TinyStories(tokenizer, num_samples=100, seq_len=64)
+    train_dataloader = DataLoader(dataset, num_workers=7, batch_size=32)
 
     config = GPTNeoConfig(
         hidden_size=64,
@@ -62,7 +62,7 @@ def main(max_steps=-1):
     trainer.fit(model, train_dataloaders=train_dataloader)
 
     model.eval()
-    input_ids = tokenizer.encode(" ", return_tensors="pt")
+    input_ids = torch.tensor([[tokenizer.eos_token_id]], dtype=torch.long)
     output = model.generate(input_ids, max_length=10, num_beams=1)
     output_text = tokenizer.decode(output[0], skip_special_tokens=True)
     print(output_text)
