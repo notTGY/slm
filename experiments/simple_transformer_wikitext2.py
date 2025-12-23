@@ -1,5 +1,5 @@
-import pytorch_lightning as pl
-from pytorch_lightning import LightningModule
+import lightning as L
+from lightning import LightningModule
 
 import torch
 from torch import Tensor
@@ -39,7 +39,7 @@ def main(max_steps=-1):
 
     model = LightningTransformer(vocab_size=dataset.vocab_size)
 
-    trainer = pl.Trainer(
+    trainer = L.Trainer(
         max_epochs=1,
         max_steps=max_steps,
     )

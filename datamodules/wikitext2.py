@@ -1,13 +1,10 @@
+import requests
 import os
 from pathlib import Path
 
 import torch
 from torch import Tensor
 from torch.utils.data import Dataset
-
-from lightning_utilities.core.imports import RequirementCache
-
-_REQUESTS_AVAILABLE = RequirementCache("requests")
 
 
 class WikiText2(Dataset):
@@ -42,11 +39,6 @@ class WikiText2(Dataset):
 
     @staticmethod
     def download(destination: Path) -> None:
-        if not _REQUESTS_AVAILABLE:
-            raise ModuleNotFoundError(str(_REQUESTS_AVAILABLE))
-
-        import requests
-
         os.makedirs(destination.parent, exist_ok=True)
         url = "https://raw.githubusercontent.com/pytorch/examples/main/word_language_model/data/wikitext-2/train.txt"
         if os.path.exists(destination):
