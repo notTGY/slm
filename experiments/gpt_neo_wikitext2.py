@@ -14,10 +14,8 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, GenerationConfig
 
 
 class LightningTransformer(LightningModule):
-    def __init__(self) -> None:
+    def __init__(self, vocab_size) -> None:
         super().__init__()
-        self.tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neo-125M")
-        vocab_size = self.tokenizer.vocab_size
         self.model = SimpleTransformer(vocab_size=vocab_size)
 
     def forward(self, inputs: Tensor, target: Tensor) -> Tensor:
@@ -33,25 +31,22 @@ class LightningTransformer(LightningModule):
     def configure_optimizers(self) -> torch.optim.Optimizer:
         return torch.optim.SGD(self.model.parameters(), lr=0.1)
 
-    def prepare_data(self) -> None:
-        WikiText2Tokenizer(self.tokenizer, download=True)
-
-    def train_dataloader(self) -> DataLoader:
-        dataset = WikiText2Tokenizer(self.tokenizer)
-        return DataLoader(dataset, num_workers=7)
-
 
 def main(max_steps=-1):
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
-    model = LightningTransformer()
+    tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neo-125M")
+
+    dataset = WikiText2Tokenizer(tokenizer)
+    train_dataloader = DataLoader(dataset, num_workers=7)
+
+    model = LightningTransformer(vocab_size=tokenizer.vocab_size)
 
     trainer = L.Trainer(
         max_epochs=1,
         max_steps=max_steps,
     )
 
-    trainer.fit(model)
-
-
+    trainer.fit(model, train_dataloaders=train_dataloader)
+        
 if __name__ == "__main__":
     main()

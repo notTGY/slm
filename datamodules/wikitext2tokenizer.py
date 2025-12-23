@@ -16,12 +16,10 @@ class WikiText2Tokenizer(Dataset):
         tokenizer,
         data_dir: Path = Path("./data"),
         block_size: int = 35,
-        download: bool = True,
     ) -> None:
         super().__init__()
         self.path = data_dir / "wikitext-2.txt"
-        if download:
-            self.download(self.path)
+        self.download(self.path)
         self.tokenizer = tokenizer
         self.data = tokenize(self.path, self.tokenizer)
         self.block_size = block_size
