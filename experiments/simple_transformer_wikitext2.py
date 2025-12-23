@@ -21,6 +21,7 @@ class LightningTransformer(LightningModule):
         inputs, target = batch
         output = self(inputs, target)
         loss = torch.nn.functional.nll_loss(output, target.view(-1))
+        self.log("train_loss", loss)
         return loss
 
     def configure_optimizers(self) -> torch.optim.Optimizer:
