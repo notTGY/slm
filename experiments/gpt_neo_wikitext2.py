@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 from models import GPTNeo
 from datamodules import WikiText2Tokenizer
 
-from transformers import AutoModelForCausalLM, AutoTokenizer, GenerationConfig
+from transformers import AutoTokenizer
 
 
 class LightningTransformer(LightningModule):
