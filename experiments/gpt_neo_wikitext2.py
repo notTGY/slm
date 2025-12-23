@@ -13,7 +13,6 @@ from transformers import AutoTokenizer, GPTNeoConfig, GPTNeoForCausalLM
 from datamodules import WikiText2Tokenizer
 
 
-
 class LightningTransformer(LightningModule):
     def __init__(self, config) -> None:
         super().__init__()
@@ -62,13 +61,11 @@ def main(max_steps=-1):
 
     trainer.fit(model, train_dataloaders=train_dataloader)
 
-
     model.eval()
     input_ids = tokenizer.encode(" ", return_tensors="pt")
-    output = model.generate(input_ids, max_length = 10, num_beams=1)
+    output = model.generate(input_ids, max_length=10, num_beams=1)
     output_text = tokenizer.decode(output[0], skip_special_tokens=True)
     print(output_text)
-
 
 
 if __name__ == "__main__":
