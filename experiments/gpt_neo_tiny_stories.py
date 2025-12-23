@@ -41,8 +41,9 @@ class LightningTransformer(LightningModule):
 def main(max_steps=-1):
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neo-125M")
+    tokenizer.pad_token_id = tokenizer.eos_token_id
 
-    dataset = TinyStories(tokenizer, num_samples=100, seq_len=64)
+    dataset = TinyStories(tokenizer, num_samples=1000, seq_len=64)
     train_dataloader = DataLoader(dataset, num_workers=7, batch_size=32)
 
     config = GPTNeoConfig(
@@ -63,7 +64,10 @@ def main(max_steps=-1):
 
     model.eval()
     input_ids = torch.tensor([[tokenizer.eos_token_id]], dtype=torch.long)
-    output = model.generate(input_ids, max_length=10, num_beams=1)
+    attention_mask = torch.ones_like(input_ids)
+    output = model.generate(
+        input_ids, attention_mask=attention_mask, max_length=20, num_beams=2
+    )
     output_text = tokenizer.decode(output[0], skip_special_tokens=True)
     print(output_text)
 
