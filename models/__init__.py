@@ -1,3 +1,3 @@
-from .transformer import LightningTransformer
+from .transformer import Transformer
 
-__all__ = ["LightningTransformer"]
+__all__ = ["Transformer"]

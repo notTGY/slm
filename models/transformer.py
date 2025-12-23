@@ -1,7 +1,3 @@
-"""Copy-pasted from
-https://github.com/Lightning-AI/pytorch-lightning/blob/master/src/lightning/pytorch/demos/transformer.py
-"""
-
 import math
 from typing import Optional
 
@@ -10,12 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch import Tensor
 from torch.nn.modules import MultiheadAttention
-from torch.utils.data import DataLoader
 
-import pytorch_lightning as pl
-from pytorch_lightning import LightningModule
-
-from datamodules import WikiText2
 
 
 if hasattr(MultiheadAttention, "_reset_parameters") and not hasattr(
@@ -116,28 +107,3 @@ class PositionalEncoding(nn.Module):
         pe[:, 1::2] = torch.cos(position * div_term)
         pe = pe.unsqueeze(0)
         return pe
-
-
-class LightningTransformer(LightningModule):
-    def __init__(self, vocab_size: int = 33278) -> None:
-        super().__init__()
-        self.model = Transformer(vocab_size=vocab_size)
-
-    def forward(self, inputs: Tensor, target: Tensor) -> Tensor:
-        return self.model(inputs, target)
-
-    def training_step(self, batch: tuple[Tensor, Tensor], batch_idx: int) -> Tensor:
-        inputs, target = batch
-        output = self(inputs, target)
-        loss = torch.nn.functional.nll_loss(output, target.view(-1))
-        return loss
-
-    def configure_optimizers(self) -> torch.optim.Optimizer:
-        return torch.optim.SGD(self.model.parameters(), lr=0.1)
-
-    def prepare_data(self) -> None:
-        WikiText2(download=True)
-
-    def train_dataloader(self) -> DataLoader:
-        dataset = WikiText2()
-        return DataLoader(dataset)
