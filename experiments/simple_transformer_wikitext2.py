@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader
 from models import Transformer
 from datamodules import WikiText2
 
+
 class LightningTransformer(LightningModule):
     def __init__(self, vocab_size: int = 33278) -> None:
         super().__init__()
@@ -30,7 +31,8 @@ class LightningTransformer(LightningModule):
 
     def train_dataloader(self) -> DataLoader:
         dataset = WikiText2()
-        return DataLoader(dataset)
+        return DataLoader(dataset, num_workers=7)
+
 
 def main(max_steps=-1):
     dataset = WikiText2()
@@ -43,6 +45,7 @@ def main(max_steps=-1):
     )
 
     trainer.fit(model)
+
 
 if __name__ == "__main__":
     main()
