@@ -1,3 +1,5 @@
+import os
+
 import lightning as L
 from lightning import LightningModule
 
@@ -12,8 +14,10 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, GenerationConfig
 
 
 class LightningTransformer(LightningModule):
-    def __init__(self, vocab_size: int) -> None:
+    def __init__(self) -> None:
         super().__init__()
+        self.tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neo-125M")
+        vocab_size = self.tokenizer.vocab_size
         self.model = SimpleTransformer(vocab_size=vocab_size)
 
     def forward(self, inputs: Tensor, target: Tensor) -> Tensor:
@@ -30,26 +34,16 @@ class LightningTransformer(LightningModule):
         return torch.optim.SGD(self.model.parameters(), lr=0.1)
 
     def prepare_data(self) -> None:
-        WikiText2Tokenizer(download=True)
+        WikiText2Tokenizer(self.tokenizer, download=True)
 
     def train_dataloader(self) -> DataLoader:
-        dataset = WikiText2Tokenizer()
+        dataset = WikiText2Tokenizer(self.tokenizer)
         return DataLoader(dataset, num_workers=7)
 
 
 def main(max_steps=-1):
-    tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neo-125M")
-    model = AutoModelForCausalLM.from_pretrained('roneneldan/TinyStories-1M')
-
-    prompt = "Once upon a time there was"
-
-    input_ids = tokenizer.encode(prompt, return_tensors="pt")
-
-
-
-    dataset = WikiText2Tokenizer(tokenizer)
-
-    model = LightningTransformer(vocab_size=dataset.vocab_size)
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
+    model = LightningTransformer()
 
     trainer = L.Trainer(
         max_epochs=1,

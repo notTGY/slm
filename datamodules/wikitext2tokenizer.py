@@ -1,6 +1,7 @@
 import requests
 import os
 from pathlib import Path
+from typing import Union
 
 import torch
 from torch import Tensor
@@ -12,7 +13,7 @@ class WikiText2Tokenizer(Dataset):
 
     def __init__(
         self,
-        tokenizer = None,
+        tokenizer,
         data_dir: Path = Path("./data"),
         block_size: int = 35,
         download: bool = True,
@@ -21,13 +22,9 @@ class WikiText2Tokenizer(Dataset):
         self.path = data_dir / "wikitext-2.txt"
         if download:
             self.download(self.path)
-        self.data, self.dictionary = tokenize(self.path)
-        self.block_size = block_size
         self.tokenizer = tokenizer
-
-    @property
-    def vocab_size(self) -> int:
-        return len(self.dictionary)
+        self.data = tokenize(self.path, self.tokenizer)
+        self.block_size = block_size
 
     def __len__(self) -> int:
         return len(self.data) // self.block_size - 1
@@ -49,41 +46,9 @@ class WikiText2Tokenizer(Dataset):
             f.write(requests.get(url).text)
 
 
-class Dictionary:
-    def __init__(self) -> None:
-        self.word2idx: dict[str, int] = {}
-        self.idx2word: list[str] = []
-
-    def add_word(self, word: str) -> int:
-        if word not in self.word2idx:
-            self.idx2word.append(word)
-            self.word2idx[word] = len(self.idx2word) - 1
-        return self.word2idx[word]
-
-    def __len__(self) -> int:
-        return len(self.idx2word)
-
-
-def tokenize(path: Path) -> tuple[Tensor, Dictionary]:
-    dictionary = Dictionary()
-
+def tokenize(path: Path, tokenizer=None) -> Tensor:
     assert os.path.exists(path)
-    # Add words to the dictionary
     with open(path, encoding="utf8") as f:
-        for line in f:
-            words = line.split() + ["<eos>"]
-            for word in words:
-                dictionary.add_word(word)
-
-    # Tokenize file content
-    with open(path, encoding="utf8") as f:
-        idss: list[Tensor] = []
-        for line in f:
-            words = line.split() + ["<eos>"]
-            ids: list[int] = []
-            for word in words:
-                ids.append(dictionary.word2idx[word])
-            idss.append(torch.tensor(ids).type(torch.int64))
-
-    return torch.cat(idss), dictionary
-
+        text = f.read()
+    ids = tokenizer.encode(text)
+    return torch.tensor(ids, dtype=torch.long)
