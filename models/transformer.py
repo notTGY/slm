@@ -8,7 +8,6 @@ from torch import Tensor
 from torch.nn.modules import MultiheadAttention
 
 
-
 if hasattr(MultiheadAttention, "_reset_parameters") and not hasattr(
     MultiheadAttention, "reset_parameters"
 ):
@@ -19,7 +18,7 @@ if hasattr(MultiheadAttention, "_reset_parameters") and not hasattr(
 class Transformer(nn.Module):
     def __init__(
         self,
-        vocab_size: int = 33278,  # default for WikiText2
+        vocab_size: int,
         ninp: int = 200,
         nhead: int = 2,
         nhid: int = 200,

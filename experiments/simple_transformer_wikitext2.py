@@ -10,7 +10,7 @@ from datamodules import WikiText2
 
 
 class LightningTransformer(LightningModule):
-    def __init__(self, vocab_size: int = 33278) -> None:
+    def __init__(self, vocab_size: int) -> None:
         super().__init__()
         self.model = Transformer(vocab_size=vocab_size)
 
