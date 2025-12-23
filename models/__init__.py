@@ -1,6 +1,6 @@
 """
 models are raw pytorch with no lightning
 """
-from .transformer import Transformer
+from .simple_transformer import SimpleTransformer
 
-__all__ = ["Transformer"]
+__all__ = ["SimpleTransformer"]

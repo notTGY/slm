@@ -5,14 +5,14 @@ import torch
 from torch import Tensor
 from torch.utils.data import DataLoader
 
-from models import Transformer
+from models import SimpleTransformer
 from datamodules import WikiText2
 
 
 class LightningTransformer(LightningModule):
     def __init__(self, vocab_size: int) -> None:
         super().__init__()
-        self.model = Transformer(vocab_size=vocab_size)
+        self.model = SimpleTransformer(vocab_size=vocab_size)
 
     def forward(self, inputs: Tensor, target: Tensor) -> Tensor:
         return self.model(inputs, target)

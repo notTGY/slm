@@ -15,7 +15,7 @@ if hasattr(MultiheadAttention, "_reset_parameters") and not hasattr(
     MultiheadAttention.reset_parameters = MultiheadAttention._reset_parameters
 
 
-class Transformer(nn.Module):
+class SimpleTransformer(nn.Module):
     def __init__(
         self,
         vocab_size: int,
