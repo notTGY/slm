@@ -7,7 +7,7 @@ import torch
 from torch import Tensor
 from torch.utils.data import DataLoader
 
-from models import SimpleTransformer
+from models import GPTNeo
 from datamodules import WikiText2Tokenizer
 
 from transformers import AutoModelForCausalLM, AutoTokenizer, GenerationConfig
@@ -16,7 +16,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, GenerationConfig
 class LightningTransformer(LightningModule):
     def __init__(self, vocab_size) -> None:
         super().__init__()
-        self.model = SimpleTransformer(vocab_size=vocab_size)
+        self.model = GPTNeo(vocab_size=vocab_size)
 
     def forward(self, inputs: Tensor, target: Tensor) -> Tensor:
         return self.model(inputs, target)
@@ -47,6 +47,7 @@ def main(max_steps=-1):
     )
 
     trainer.fit(model, train_dataloaders=train_dataloader)
-        
+
+
 if __name__ == "__main__":
     main()
