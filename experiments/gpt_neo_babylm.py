@@ -95,7 +95,10 @@ def eval_model(model, tokenizer):
         input_ids = torch.tensor([[tokenizer.eos_token_id]], dtype=torch.long)
         attention_mask = torch.ones_like(input_ids)
         gen_out = model.generate(
-            input_ids, attention_mask=attention_mask, max_length=20
+            input_ids,
+            attention_mask=attention_mask,
+            max_length=20,
+            pad_token_id=tokenizer.eos_token_id,
         )
         print(
             f"Open-ended generation:\n{tokenizer.decode(gen_out[0], skip_special_tokens=True)}"
