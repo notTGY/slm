@@ -12,8 +12,15 @@ The plan according to [karpathy post](https://karpathy.github.io/2019/04/25/reci
 
 ## History
 
-`simple_transformer_wikitext2`
+### simple\_transformer\_wikitext2
+Almost entirely copied from documentation of lightning.
 
 `gpt_neo_wikitext2`
 
 `gpt_neo_tiny_stories`
+
+## Dev
+
+`uv sync` to install deps.
+
+`uv run main.py` launches latest edited experiment from `experiments/` folder.
