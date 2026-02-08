@@ -41,4 +41,4 @@ if __name__ == "__main__":
     print(f"Selected: {module}")
     imported_module = importlib.import_module(base + "." + module[:-3])
     main = getattr(imported_module, "main")
-    main(max_steps=args.max_steps)
+    main(max_steps=int(args.max_steps))

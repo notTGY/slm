@@ -20,8 +20,8 @@ class TinyStories(Dataset):
         num_samples: int = 10,
     ) -> None:
         super().__init__()
-        self.ds = load_dataset("roneneldan/TinyStories", streaming=True)
-        self.dataset = list(self.ds["train"].take(num_samples))
+        self.ds = load_dataset("nilq/babylm-10M", split="train")
+        self.dataset = list(self.ds)
 
         self.data = [tokenizer.encode(i["text"]) for i in self.dataset]
         eos_id = tokenizer.eos_token_id
@@ -88,7 +88,7 @@ def main(max_steps=-1):
     tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neo-125M")
     tokenizer.pad_token_id = tokenizer.eos_token_id
 
-    dataset = TinyStories(tokenizer, num_samples=1000, seq_len=64)
+    dataset = TinyStories(tokenizer, seq_len=64)
     train_dataloader = DataLoader(dataset, num_workers=7, batch_size=32)
 
     config = GPTNeoConfig(
@@ -116,28 +116,14 @@ def main(max_steps=-1):
     ]
     model.eval()
     with torch.no_grad():
-        # 1. Open-ended generation check
         input_ids = torch.tensor([[tokenizer.eos_token_id]], dtype=torch.long)
         attention_mask = torch.ones_like(input_ids)
-        gen_out = model.generate(input_ids, attention_mask=attention_mask, max_length=20)
-        print(f"Gen:\n{tokenizer.decode(gen_out[0], skip_special_tokens=True)}\n=============")
+        output = model.generate(
+            input_ids, attention_mask=attention_mask, max_length=20, num_beams=2
+        )
+        output_text = tokenizer.decode(output[0], skip_special_tokens=True)
+        print(output_text)
 
-        # 2. Scientific Perplexity (5 lines)
-        enc = tokenizer(eval_texts, return_tensors="pt", padding=True).to(model.device)
-
-        # 1. Get raw model output
-        output = model(enc.input_ids, enc.input_ids)
-
-        # 2. Logic: If output is already a loss (0D or 1D), just exponentiate it
-        if output.dim() < 2:
-            val_loss = output.mean()
-        else:
-            # If output is 2D/3D logits, calculate cross-entropy manually
-            # Note: We shift so token N predicts token N+1
-            logits = output.logits if hasattr(output, 'logits') else output
-            val_loss = torch.nn.functional.cross_entropy(
-                logits[:, :-1, :].reshape(-1, logits.size(-1)),
-                enc.input_ids[:, 1:].reshape(-1)
-            )
-
-        print(f"Validation Perplexity: {torch.exp(val_loss).item():.2f}")
+        inputs = tokenizer(eval_texts, return_tensors="pt", padding=True, truncation=True).to(model.device)
+        loss = model(inputs.input_ids, labels=inputs.input_ids, attention_mask=inputs.attention_mask).loss
+        print(f"Validation Perplexity: {torch.exp(loss).item():.2f}")
