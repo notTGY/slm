@@ -1,5 +1,4 @@
-import sys
-import torch
+import sys, os, re, torch
 from transformers import AutoTokenizer, GPTNeoConfig, GPTNeoForCausalLM
 from lightning import LightningModule
 
@@ -13,12 +12,39 @@ class Model(LightningModule):
         return self.model.generate(*args, **kwargs)
 
 
-tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neo-125M")
-checkpoint = (
-    sys.argv[1]
-    if len(sys.argv) > 1
-    else "./lightning_logs/version_0/checkpoints/epoch=0-step=100.ckpt"
-)
+def find_latest_checkpoint():
+    logs_dir = "./lightning_logs"
+    if not os.path.exists(logs_dir):
+        return None
+    checkpoints = []
+    for version in os.listdir(logs_dir):
+        ckpt_dir = os.path.join(logs_dir, version, "checkpoints")
+        if os.path.isdir(ckpt_dir):
+            for f in os.listdir(ckpt_dir):
+                if f.endswith(".ckpt"):
+                    m = re.search(r"epoch=(\d+)-step=(\d+)\.ckpt", f)
+                    if m:
+                        checkpoints.append(
+                            (
+                                int(m.group(1)),
+                                int(m.group(2)),
+                                os.path.join(ckpt_dir, f),
+                            )
+                        )
+    if not checkpoints:
+        return None
+    checkpoints.sort(key=lambda x: (x[0], x[1]))
+    return checkpoints[-1][2]
+
+
+
+checkpoint = sys.argv[1] if len(sys.argv) > 1 else find_latest_checkpoint()
+if not checkpoint:
+    print("No checkpoint found in ./lightning_logs")
+    sys.exit(1)
+
+print(f"Loading: {checkpoint}")
+
 config = GPTNeoConfig(
     hidden_size=64,
     num_heads=16,
@@ -26,6 +52,9 @@ config = GPTNeoConfig(
     attention_types=[[["global", "local"], 4]],
 )
 model = Model.load_from_checkpoint(checkpoint, config=config).eval()
+tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neo-125M")
+
+print(f"Staring conversation, type 'exit' to exit")
 
 while True:
     prompt = input("> ")
