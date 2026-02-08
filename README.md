@@ -10,7 +10,7 @@ The plan according to [Karpathys' post]:
 3. Try scaling baseline model, verify this helps with test
 
 
-## History
+## Experiments (in order of creation)
 
 ### simple\_transformer\_wikitext2
 Almost entirely copied from documentation of lightning.
