@@ -6,7 +6,8 @@ from difflib import SequenceMatcher
 
 parser = argparse.ArgumentParser(prog="SLM experiments", description="Run SLM training")
 parser.add_argument("experiment", nargs="?")
-parser.add_argument("--max_steps", default=100)
+parser.add_argument("--max_steps")
+parser.add_argument("--num_samples")
 
 base = "experiments"
 
@@ -41,4 +42,12 @@ if __name__ == "__main__":
     print(f"Selected: {module}")
     imported_module = importlib.import_module(base + "." + module[:-3])
     main = getattr(imported_module, "main")
-    main(max_steps=int(args.max_steps))
+
+    max_steps = None if args.max_steps is None else int(args.max_steps)
+    num_samples = None if args.num_samples is None else int(args.num_samples)
+    kwargs = {
+        k: v
+        for k, v in {"max_steps": max_steps, "num_samples": num_samples}.items()
+        if v is not None
+    }
+    main(**kwargs)

@@ -12,16 +12,16 @@ from transformers import AutoTokenizer, GPTNeoConfig, GPTNeoForCausalLM
 from datasets import load_dataset
 
 
-class TinyStories(Dataset):
+class Babylm10M(Dataset):
     def __init__(
         self,
         tokenizer,
+        num_samples: int,
         seq_len: int = 33,
-        num_samples: int = 10,
     ) -> None:
         super().__init__()
-        self.ds = load_dataset("nilq/babylm-10M", split="train")
-        self.dataset = list(self.ds)
+        self.ds = load_dataset("nilq/babylm-10M", streaming=True)
+        self.dataset = list(self.ds["train"].take(num_samples))
 
         self.data = [tokenizer.encode(i["text"]) for i in self.dataset]
         eos_id = tokenizer.eos_token_id
@@ -79,17 +79,70 @@ class LightningTransformer(LightningModule):
         return torch.optim.SGD(self.model.parameters(), lr=0.1)
 
 
-if __name__ == "__main__":
-    main()
+eval_texts = [
+    "The cat sat on the mat.",
+    "Once upon a time, there was a little girl who lived in a forest.",
+    "The sun rises in the east and sets in the west.",
+    "One plus one is equal to two.",
+    "If it is raining outside, you should take an umbrella.",
+]
 
 
-def main(max_steps=-1):
+def eval_model(model, tokenizer):
+    model.eval()
+    with torch.no_grad():
+        # 1. Open-ended generation check
+        input_ids = torch.tensor([[tokenizer.eos_token_id]], dtype=torch.long)
+        attention_mask = torch.ones_like(input_ids)
+        gen_out = model.generate(
+            input_ids, attention_mask=attention_mask, max_length=20
+        )
+        print(
+            f"Open-ended generation:\n{tokenizer.decode(gen_out[0], skip_special_tokens=True)}"
+        )
+        print("=" * 40)
+
+        # 2. Scientific Perplexity
+        enc = tokenizer(eval_texts, return_tensors="pt", padding=True).to(model.device)
+        input_ids = enc.input_ids
+        attention_mask = enc.attention_mask
+
+        # Get raw model output (logits, not log_probs)
+        with torch.no_grad():
+            outputs = model.model(input_ids, attention_mask=attention_mask)
+            logits = outputs.logits  # Shape: (batch, seq_len, vocab_size)
+
+        # Shift logits and labels for next-token prediction
+        # Token at position i predicts token at position i+1
+        shift_logits = logits[:, :-1, :].contiguous()  # Remove last position
+        shift_labels = input_ids[:, 1:].contiguous()  # Remove first position
+        shift_mask = attention_mask[:, 1:].contiguous()  # Mask for shifted positions
+
+        # Flatten for cross_entropy
+        flat_logits = shift_logits.view(-1, shift_logits.size(-1))
+        flat_labels = shift_labels.view(-1)
+        flat_mask = shift_mask.view(-1).float()
+
+        # Calculate cross-entropy loss (ignoring padding tokens)
+        losses = torch.nn.functional.cross_entropy(
+            flat_logits, flat_labels, reduction="none"
+        )
+        val_loss = (losses * flat_mask).sum() / flat_mask.sum()
+
+        print(f"Validation Perplexity: {torch.exp(val_loss).item():.2f}")
+
+
+def main(max_steps=-1, num_samples=122000):
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
+    seq_len = 64
+    batch_size = 32
     tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neo-125M")
     tokenizer.pad_token_id = tokenizer.eos_token_id
 
-    dataset = TinyStories(tokenizer, seq_len=64)
-    train_dataloader = DataLoader(dataset, num_workers=7, batch_size=32)
+    dataset = Babylm10M(tokenizer, num_samples=num_samples, seq_len=seq_len)
+    print(f"Dataset tokens: {len(dataset) + seq_len}")
+    print(f"Learn tokens: {len(dataset) * seq_len}")
+    train_dataloader = DataLoader(dataset, num_workers=7, batch_size=batch_size)
 
     config = GPTNeoConfig(
         hidden_size=64,
@@ -106,24 +159,8 @@ def main(max_steps=-1):
     )
 
     trainer.fit(model, train_dataloaders=train_dataloader)
+    eval_model(model, tokenizer)
 
-    eval_texts = [
-        "The cat sat on the mat.",
-        "Once upon a time, there was a little girl who lived in a forest.",
-        "The sun rises in the east and sets in the west.",
-        "One plus one is equal to two.",
-        "If it is raining outside, you should take an umbrella."
-    ]
-    model.eval()
-    with torch.no_grad():
-        input_ids = torch.tensor([[tokenizer.eos_token_id]], dtype=torch.long)
-        attention_mask = torch.ones_like(input_ids)
-        output = model.generate(
-            input_ids, attention_mask=attention_mask, max_length=20, num_beams=2
-        )
-        output_text = tokenizer.decode(output[0], skip_special_tokens=True)
-        print(output_text)
 
-        inputs = tokenizer(eval_texts, return_tensors="pt", padding=True, truncation=True).to(model.device)
-        loss = model(inputs.input_ids, labels=inputs.input_ids, attention_mask=inputs.attention_mask).loss
-        print(f"Validation Perplexity: {torch.exp(loss).item():.2f}")
+if __name__ == "__main__":
+    main()

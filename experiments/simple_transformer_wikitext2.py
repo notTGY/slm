@@ -105,9 +105,9 @@ class SimpleTransformer(nn.Module):
     def __init__(
         self,
         vocab_size: int,
-        ninp: int = 200,
+        ninp: int = 48,
         nhead: int = 2,
-        nhid: int = 200,
+        nhid: int = 48,
         nlayers: int = 2,
         dropout: float = 0.2,
     ) -> None:
@@ -220,8 +220,11 @@ class LightningTransformer(LightningModule):
         return DataLoader(dataset, num_workers=7)
 
 
-def main(max_steps=-1):
-    dataset = WikiText2()
+def main(max_steps=-1, num_samples=10):
+    seq_len = 35
+    dataset = WikiText2(block_size=seq_len)
+    print(f"Dataset tokens: {len(dataset) + seq_len}")
+    print(f"Learn tokens: {len(dataset) * seq_len}")
 
     model = LightningTransformer(vocab_size=dataset.vocab_size)
 
