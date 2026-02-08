@@ -33,6 +33,10 @@ Run script is based around the idea that just `uv run main.py` would run full tr
 
 `uvx tensorboard --logdir lightning_logs/` to watch at the curves.
 
+## Run
+
+use `uv run chat.py` to evaluate latest model. It is not chat, just prompting (text completion).
+
 
 [Karpathys' post]: https://karpathy.github.io/2019/04/25/recipe/
 [HumanEval paper]: https://arxiv.org/abs/2107.03374
