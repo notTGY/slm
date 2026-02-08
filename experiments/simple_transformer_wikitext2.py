@@ -93,6 +93,7 @@ def tokenize(path: Path) -> tuple[Tensor, Dictionary]:
 
     return torch.cat(idss), dictionary
 
+
 if hasattr(MultiheadAttention, "_reset_parameters") and not hasattr(
     MultiheadAttention, "reset_parameters"
 ):
