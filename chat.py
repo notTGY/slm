@@ -37,7 +37,6 @@ def find_latest_checkpoint():
     return checkpoints[-1][2]
 
 
-
 checkpoint = sys.argv[1] if len(sys.argv) > 1 else find_latest_checkpoint()
 if not checkpoint:
     print("No checkpoint found in ./lightning_logs")
@@ -57,7 +56,7 @@ tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neo-125M")
 print(f"Staring conversation, type 'exit' to exit")
 
 while True:
-    prompt = input("> ")
+    prompt = input("\033[91m>\033[0m ")
     if prompt.lower() in ("quit", "exit"):
         break
     inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
