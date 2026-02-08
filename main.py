@@ -1,3 +1,4 @@
+#!/usr/bin/env -S uv run
 import os
 import argparse
 import importlib

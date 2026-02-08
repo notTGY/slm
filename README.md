@@ -8,3 +8,12 @@ The plan according to [karpathy post](https://karpathy.github.io/2019/04/25/reci
     3. Input-independent model baseline (train with all inputs set to 0, but real targets)
     4. gpt2 overfitting one batch
 3. Try scaling baseline model, verify this helps with test
+
+
+## History
+
+`simple_transformer_wikitext2`
+
+`gpt_neo_wikitext2`
+
+`gpt_neo_tiny_stories`
