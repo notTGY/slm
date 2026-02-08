@@ -1,4 +1,4 @@
-from experiments.gpt_neo_tiny_stories import main
+from experiments.simple_transformer_wikitext2 import main
 
 
 if __name__ == "__main__":
