@@ -1,4 +1,7 @@
 import os
+import requests
+from pathlib import Path
+from typing import Union
 
 import lightning as L
 from lightning import LightningModule
@@ -6,11 +9,53 @@ from lightning import LightningModule
 import torch
 from torch import Tensor
 import torch.nn.functional as F
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 
 from transformers import AutoTokenizer, GPTNeoConfig, GPTNeoForCausalLM
 
-from datamodules import WikiText2Tokenizer
+
+class WikiText2Tokenizer(Dataset):
+    """Mini version of WikiText2."""
+
+    def __init__(
+        self,
+        tokenizer,
+        data_dir: Path = Path("./data"),
+        block_size: int = 35,
+    ) -> None:
+        super().__init__()
+        self.path = data_dir / "wikitext-2.txt"
+        self.download(self.path)
+        self.tokenizer = tokenizer
+        self.data = tokenize(self.path, self.tokenizer)
+        self.block_size = block_size
+
+    def __len__(self) -> int:
+        return len(self.data) // self.block_size - 1
+
+    def __getitem__(self, index: int) -> tuple[Tensor, Tensor]:
+        start = index * self.block_size
+        end = start + self.block_size
+        inputs = self.data[start:end]
+        target = self.data[(start + 1) : (end + 1)]
+        return inputs, target
+
+    @staticmethod
+    def download(destination: Path) -> None:
+        os.makedirs(destination.parent, exist_ok=True)
+        url = "https://raw.githubusercontent.com/pytorch/examples/main/word_language_model/data/wikitext-2/train.txt"
+        if os.path.exists(destination):
+            return
+        with open(destination, "w") as f:
+            f.write(requests.get(url).text)
+
+
+def tokenize(path: Path, tokenizer=None) -> Tensor:
+    assert os.path.exists(path)
+    with open(path, encoding="utf8") as f:
+        text = f.read()
+    ids = tokenizer.encode(text)
+    return torch.tensor(ids, dtype=torch.long)
 
 
 class LightningTransformer(LightningModule):
@@ -62,8 +107,11 @@ def main(max_steps=-1):
     trainer.fit(model, train_dataloaders=train_dataloader)
 
     model.eval()
-    input_ids = tokenizer.encode(" ", return_tensors="pt")
-    output = model.generate(input_ids, max_length=10, num_beams=1)
+    input_ids = torch.tensor([[tokenizer.eos_token_id]], dtype=torch.long)
+    attention_mask = torch.ones_like(input_ids)
+    output = model.generate(
+        input_ids, attention_mask=attention_mask, max_length=20, num_beams=2
+    )
     output_text = tokenizer.decode(output[0], skip_special_tokens=True)
     print(output_text)
 
