@@ -1,7 +1,6 @@
 import os
 import requests
 from pathlib import Path
-from typing import Union
 
 import lightning as L
 from lightning import LightningModule
