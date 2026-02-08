@@ -2,6 +2,7 @@ import os
 
 import lightning as L
 from lightning import LightningModule
+from lightning.pytorch.callbacks import ModelCheckpoint
 
 import torch
 from torch import Tensor
@@ -156,9 +157,20 @@ def main(max_steps=-1, num_samples=122000):
     # print("Model Config:", config.to_json_string())
     model = LightningTransformer(config)
 
+    checkpoint_callback = ModelCheckpoint(
+        dirpath="checkpoints/",
+        filename="gpt-neo-babylm-{step:06d}",
+        every_n_train_steps=1000,
+        save_top_k=3,
+        monitor="train_loss",
+        mode="min",
+        save_last=True,
+    )
+
     trainer = L.Trainer(
         max_epochs=1,
         max_steps=max_steps,
+        callbacks=[checkpoint_callback],
     )
 
     trainer.fit(model, train_dataloaders=train_dataloader)

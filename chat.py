@@ -13,6 +13,26 @@ class Model(LightningModule):
 
 
 def find_latest_checkpoint():
+    # Check new checkpoints/ directory first
+    ckpt_dir = "./checkpoints"
+    if os.path.exists(ckpt_dir):
+        # Prefer last.ckpt if it exists
+        last_ckpt = os.path.join(ckpt_dir, "last.ckpt")
+        if os.path.exists(last_ckpt):
+            return last_ckpt
+
+        # Otherwise find the latest numbered checkpoint
+        checkpoints = []
+        for f in os.listdir(ckpt_dir):
+            if f.endswith(".ckpt") and f != "last.ckpt":
+                m = re.search(r".*-(\d+)\.ckpt", f)
+                if m:
+                    checkpoints.append((int(m.group(1)), os.path.join(ckpt_dir, f)))
+        if checkpoints:
+            checkpoints.sort(key=lambda x: x[0])
+            return checkpoints[-1][1]
+
+    # Fallback to old lightning_logs directory
     logs_dir = "./lightning_logs"
     if not os.path.exists(logs_dir):
         return None

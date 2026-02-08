@@ -13,6 +13,7 @@ from torch.utils.data import DataLoader, Dataset
 
 import lightning as L
 from lightning import LightningModule
+from lightning.pytorch.callbacks import ModelCheckpoint
 
 
 class WikiText2(Dataset):
@@ -228,9 +229,20 @@ def main(max_steps=-1, num_samples=10):
 
     model = LightningTransformer(vocab_size=dataset.vocab_size)
 
+    checkpoint_callback = ModelCheckpoint(
+        dirpath="checkpoints/",
+        filename="simple-transformer-wikitext2-{step:06d}",
+        every_n_train_steps=1000,
+        save_top_k=3,
+        monitor="train_loss",
+        mode="min",
+        save_last=True,
+    )
+
     trainer = L.Trainer(
         max_epochs=1,
         max_steps=max_steps,
+        callbacks=[checkpoint_callback],
     )
 
     trainer.fit(model)
