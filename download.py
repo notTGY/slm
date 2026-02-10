@@ -3,6 +3,14 @@ import sys
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
 
+eval_texts = [
+    "The cat sat on the mat.",
+    "Once upon a time, there was a little girl who lived in a forest.",
+    "The sun rises in the east and sets in the west.",
+    "One plus one is equal to two.",
+    "If it is raining outside, you should take an umbrella.",
+]
+
 def main():
     # Get repo_id from command line or prompt
     if len(sys.argv) > 1:
@@ -23,6 +31,7 @@ def main():
         # Download model and tokenizer from HuggingFace
         model = AutoModelForCausalLM.from_pretrained(repo_id)
         tokenizer = AutoTokenizer.from_pretrained(repo_id)
+        tokenizer.pad_token = tokenizer.eos_token
         print(f"✓ Model and tokenizer downloaded successfully!")
     except Exception as e:
         print(f"Error downloading model: {e}")
@@ -53,8 +62,38 @@ def main():
     print(f"Prompt: 'The cat sat on the'")
     print(f"Generated: '{generated_text}'")
 
-    # Test 2: Simple math/completion
-    print("\nTest 2: Simple completion")
+    # 2. Scientific Perplexity
+    enc = tokenizer(eval_texts, return_tensors="pt", padding=True).to(model.device)
+    input_ids = enc.input_ids
+    attention_mask = enc.attention_mask
+
+    # Get raw model output (logits, not log_probs)
+    with torch.no_grad():
+        outputs = model(input_ids, attention_mask=attention_mask)
+        logits = outputs.logits  # Shape: (batch, seq_len, vocab_size)
+
+    # Shift logits and labels for next-token prediction
+    # Token at position i predicts token at position i+1
+    shift_logits = logits[:, :-1, :].contiguous()  # Remove last position
+    shift_labels = input_ids[:, 1:].contiguous()  # Remove first position
+    shift_mask = attention_mask[:, 1:].contiguous()  # Mask for shifted positions
+
+    # Flatten for cross_entropy
+    flat_logits = shift_logits.view(-1, shift_logits.size(-1))
+    flat_labels = shift_labels.view(-1)
+    flat_mask = shift_mask.view(-1).float()
+
+    # Calculate cross-entropy loss (ignoring padding tokens)
+    losses = torch.nn.functional.cross_entropy(
+        flat_logits, flat_labels, reduction="none"
+    )
+    val_loss = (losses * flat_mask).sum() / flat_mask.sum()
+
+    print("\nTest 2: Perplexity on 5 holdout prompts")
+    print(f"Validation Perplexity: {torch.exp(val_loss).item():.2f}")
+
+    # Test 3: Simple math/completion
+    print("\nTest 3: Simple completion")
     input_ids = tokenizer("Once upon a time,", return_tensors="pt").input_ids
     attention_mask = tokenizer("Once upon a time,", return_tensors="pt").attention_mask
 

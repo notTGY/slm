@@ -196,9 +196,10 @@ class PositionalEncoding(nn.Module):
 
 
 class LightningTransformer(LightningModule):
-    def __init__(self, vocab_size: int) -> None:
+    def __init__(self, vocab_size: int, batch_size: int) -> None:
         super().__init__()
         self.model = SimpleTransformer(vocab_size=vocab_size)
+        self.batch_size = batch_size
 
     def forward(self, inputs: Tensor, target: Tensor) -> Tensor:
         return self.model(inputs, target)
@@ -218,16 +219,15 @@ class LightningTransformer(LightningModule):
 
     def train_dataloader(self) -> DataLoader:
         dataset = WikiText2()
-        return DataLoader(dataset, num_workers=7)
+        return DataLoader(dataset, num_workers=7, batch_size=self.batch_size)
 
 
-def main(max_steps=-1, num_samples=10):
-    seq_len = 35
+def main(max_steps=-1, num_samples=10, batch_size=32, seq_len=35):
     dataset = WikiText2(block_size=seq_len)
     print(f"Dataset tokens: {len(dataset) + seq_len}")
     print(f"Learn tokens: {len(dataset) * seq_len}")
 
-    model = LightningTransformer(vocab_size=dataset.vocab_size)
+    model = LightningTransformer(vocab_size=dataset.vocab_size, batch_size=batch_size)
 
     checkpoint_callback = ModelCheckpoint(
         dirpath="checkpoints/",

@@ -8,6 +8,8 @@ parser = argparse.ArgumentParser(prog="SLM experiments", description="Run SLM tr
 parser.add_argument("experiment", nargs="?")
 parser.add_argument("--max_steps")
 parser.add_argument("--num_samples")
+parser.add_argument("--batch_size")
+parser.add_argument("--seq_len")
 
 base = "experiments"
 
@@ -45,9 +47,16 @@ if __name__ == "__main__":
 
     max_steps = None if args.max_steps is None else int(args.max_steps)
     num_samples = None if args.num_samples is None else int(args.num_samples)
+    batch_size = None if args.batch_size is None else int(args.batch_size)
+    seq_len = None if args.seq_len is None else int(args.seq_len)
     kwargs = {
         k: v
-        for k, v in {"max_steps": max_steps, "num_samples": num_samples}.items()
+        for k, v in {
+            "max_steps": max_steps,
+            "num_samples": num_samples,
+            "batch_size": batch_size,
+            "seq_len": seq_len,
+        }.items()
         if v is not None
     }
     main(**kwargs)
