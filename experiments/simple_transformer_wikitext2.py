@@ -222,10 +222,10 @@ class LightningTransformer(LightningModule):
         return DataLoader(dataset, num_workers=7, batch_size=self.batch_size)
 
 
-def main(max_steps=-1, num_samples=10, batch_size=32, seq_len=35):
+def main(max_steps=-1, num_samples=10, batch_size=32, seq_len=35, epochs=1):
     dataset = WikiText2(block_size=seq_len)
     print(f"Dataset tokens: {len(dataset) + seq_len}")
-    print(f"Learn tokens: {len(dataset) * seq_len}")
+    print(f"Learn tokens: {len(dataset) * seq_len * epochs}")
 
     model = LightningTransformer(vocab_size=dataset.vocab_size, batch_size=batch_size)
 
@@ -240,7 +240,7 @@ def main(max_steps=-1, num_samples=10, batch_size=32, seq_len=35):
     )
 
     trainer = L.Trainer(
-        max_epochs=1,
+        max_epochs=epochs,
         max_steps=max_steps,
         callbacks=[checkpoint_callback],
     )

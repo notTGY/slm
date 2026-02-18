@@ -21,7 +21,8 @@ class Babylm10M(Dataset):
         seq_len: int = 33,
     ) -> None:
         super().__init__()
-        self.ds = load_dataset("nilq/babylm-10M", streaming=True)
+        self.ds = load_dataset("nilq/babylm-10M")
+        print(self.ds)
         self.dataset = list(self.ds["train"].take(num_samples))
 
         self.data = [tokenizer.encode(i["text"]) for i in self.dataset]
@@ -136,14 +137,14 @@ def eval_model(model, tokenizer):
         print(f"Validation Perplexity: {torch.exp(val_loss).item():.2f}")
 
 
-def main(max_steps=-1, num_samples=122000, batch_size=32, seq_len=64):
+def main(max_steps=-1, num_samples=1058740, batch_size=32, seq_len=64, epochs=1):
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neo-125M")
     tokenizer.pad_token_id = tokenizer.eos_token_id
 
     dataset = Babylm10M(tokenizer, num_samples=num_samples, seq_len=seq_len)
     print(f"Dataset tokens: {len(dataset) + seq_len}")
-    print(f"Learn tokens: {len(dataset) * seq_len}")
+    print(f"Learn tokens: {len(dataset) * seq_len * epochs}")
     train_dataloader = DataLoader(dataset, num_workers=7, batch_size=batch_size)
 
     config = GPTNeoConfig(
@@ -166,7 +167,7 @@ def main(max_steps=-1, num_samples=122000, batch_size=32, seq_len=64):
     )
 
     trainer = L.Trainer(
-        max_epochs=1,
+        max_epochs=epochs,
         max_steps=max_steps,
         callbacks=[checkpoint_callback],
     )
