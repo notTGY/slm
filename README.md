@@ -10,17 +10,39 @@ The plan according to [Karpathys' post]:
 3. Try scaling baseline model, verify this helps with test
 
 
+## Holdout Dataset for testing small models Perplexity
+
+```py
+eval_texts = [
+    "The cat sat on the mat.", # human-like text
+    "Once upon a time, there was a little girl who lived in a forest.", # Tiny stories like text
+    "The sun rises in the east and sets in the west.", # World knowledge
+    "One plus one is equal to two.", # Math
+    "If it is raining outside, you should take an umbrella.", # Logic
+]
+```
+
+To evaluate model run `uv run download.py` and pass huggingface repo with model with compatible architecture.
+For example: `mikeoxmaul/zmeeust-w`
+
+
 ## Experiments (in order of creation)
 Only good to go experiments, others I'm still considering if are good enough for learning/evaluation purposes.
-
-### simple\_transformer\_wikitext2
-Almost entirely copied from documentation of lightning. Dataset is [WikiText2 dataset]
 
 ### gpt\_neo\_wikitext2
 Same dataset, gpt neo archtecture as seen in [Tiny Stories paper]
 
+Perplexity on holdout dataset: 1364.45
+
 ### gpt\_neo\_tiny\_stories
 Tiny stories dataset, gpt neo, hyperparameters all as seen in [Tiny Stories paper]
+
+Perplexity on holdout dataset: 166.99
+
+### gpt\_neo\_babylm
+Babylm dataset, gpt neo, hyperparameters all as seen in [Tiny Stories paper]. More info about [Babylm challenge] and [Babylm dataset]
+
+Perplexity on holdout dataset: 308.99
 
 ## Dev
 
@@ -43,3 +65,5 @@ use `uv run chat.py` to evaluate latest model. It is not chat, just prompting (t
 [Tiny Stories paper]: https://arxiv.org/abs/2305.07759
 [WikiText2 dataset]: https://github.com/pytorch/examples/tree/main/word_language_model/data/wikitext-2
 [Chinchilla scaling laws]: https://arxiv.org/abs/2203.15556
+[Babylm challenge]: https://babylm.github.io/
+[Babylm dataset]: https://huggingface.co/datasets/nilq/babylm-10M
