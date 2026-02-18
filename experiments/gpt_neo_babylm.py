@@ -22,7 +22,6 @@ class Babylm10M(Dataset):
     ) -> None:
         super().__init__()
         self.ds = load_dataset("nilq/babylm-10M")
-        print(self.ds)
         self.dataset = list(self.ds["train"].take(num_samples))
 
         self.data = [tokenizer.encode(i["text"]) for i in self.dataset]
