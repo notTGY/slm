@@ -35,7 +35,7 @@ class Alpaca(Dataset):
 
     def __len__(self) -> int:
         total_length = self.cum_lengths[-1]
-        return total_length - self.seq_len
+        return max(1, total_length - self.seq_len)
 
     def __getitem__(self, index: int) -> tuple[Tensor, Tensor]:
         start = index
