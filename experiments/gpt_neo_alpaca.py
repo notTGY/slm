@@ -157,7 +157,7 @@ def main(max_steps=-1, num_samples=100, batch_size=1, seq_len=1024, epochs=1):
 
     checkpoint_callback = ModelCheckpoint(
         dirpath="checkpoints/",
-        filename="gpt-neo-babylm-{step:06d}",
+        filename="gpt-neo-alpaca-{step:06d}",
         every_n_train_steps=1000,
         save_top_k=3,
         monitor="train_loss",

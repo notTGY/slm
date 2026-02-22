@@ -1,6 +1,4 @@
 import os
-import requests
-from pathlib import Path
 
 import lightning as L
 from lightning import LightningModule
@@ -12,50 +10,49 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader, Dataset
 
 from transformers import AutoTokenizer, GPTNeoConfig, GPTNeoForCausalLM
+from datasets import load_dataset
 
 
-class WikiText2Tokenizer(Dataset):
-    """Mini version of WikiText2."""
-
+class Wikitext(Dataset):
     def __init__(
         self,
         tokenizer,
-        data_dir: Path = Path("./data"),
-        block_size: int = 35,
+        num_samples: int,
+        seq_len: int = 33,
     ) -> None:
         super().__init__()
-        self.path = data_dir / "wikitext-2.txt"
-        self.download(self.path)
-        self.tokenizer = tokenizer
-        self.data = tokenize(self.path, self.tokenizer)
-        self.block_size = block_size
+        self.ds = load_dataset("wikitext", "wikitext-2-raw-v1")
+        self.dataset = list(self.ds["train"].take(num_samples))
+
+        self.data = [tokenizer.encode(i["text"]) for i in self.dataset]
+        eos_id = tokenizer.eos_token_id
+        self.data = [d + [eos_id] for d in self.data]
+        self.cum_lengths = [0]
+        for d in self.data:
+            self.cum_lengths.append(self.cum_lengths[-1] + len(d))
+
+        self.seq_len = seq_len
 
     def __len__(self) -> int:
-        return len(self.data) // self.block_size - 1
+        total_length = self.cum_lengths[-1]
+        return max(1, total_length - self.seq_len)
 
     def __getitem__(self, index: int) -> tuple[Tensor, Tensor]:
-        start = index * self.block_size
-        end = start + self.block_size
-        inputs = self.data[start:end]
-        target = self.data[(start + 1) : (end + 1)]
+        start = index
+        end = start + self.seq_len + 1  # +1 for target
+        tokens = []
+        for i in range(len(self.data)):
+            story_start = self.cum_lengths[i]
+            story_end = self.cum_lengths[i + 1]
+            if story_end > start:
+                local_start = max(0, start - story_start)
+                local_end = min(len(self.data[i]), end - story_start)
+                tokens.extend(self.data[i][local_start:local_end])
+                if len(tokens) >= self.seq_len + 1:
+                    break
+        inputs = torch.tensor(tokens[: self.seq_len])
+        target = torch.tensor(tokens[1 : self.seq_len + 1])
         return inputs, target
-
-    @staticmethod
-    def download(destination: Path) -> None:
-        os.makedirs(destination.parent, exist_ok=True)
-        url = "https://raw.githubusercontent.com/pytorch/examples/main/word_language_model/data/wikitext-2/train.txt"
-        if os.path.exists(destination):
-            return
-        with open(destination, "w") as f:
-            f.write(requests.get(url).text)
-
-
-def tokenize(path: Path, tokenizer=None) -> Tensor:
-    assert os.path.exists(path)
-    with open(path, encoding="utf8") as f:
-        text = f.read()
-    ids = tokenizer.encode(text)
-    return torch.tensor(ids, dtype=torch.long)
 
 
 class LightningTransformer(LightningModule):
@@ -139,12 +136,12 @@ def eval_model(model, tokenizer):
         print(f"Validation Perplexity: {torch.exp(val_loss).item():.2f}")
 
 
-def main(max_steps=-1, num_samples=10, batch_size=32, seq_len=35, epochs=1):
+def main(max_steps=-1, num_samples=10, batch_size=32, seq_len=64, epochs=1):
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neo-125M")
     tokenizer.pad_token_id = tokenizer.eos_token_id
 
-    dataset = WikiText2Tokenizer(tokenizer, block_size=seq_len)
+    dataset = Wikitext(tokenizer, num_samples=num_samples, seq_len=seq_len)
     print(f"Dataset tokens: {len(dataset) + seq_len}")
     print(f"Learn tokens: {len(dataset) * seq_len * epochs}")
     train_dataloader = DataLoader(dataset, num_workers=7, batch_size=batch_size)
