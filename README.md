@@ -55,6 +55,9 @@ Run script is based around the idea that just `uv run main.py` would run full tr
 
 `uvx tensorboard --logdir lightning_logs/` to watch at the curves.
 
+
+See [onnx notebook](https://colab.research.google.com/drive/1fwTNiZS1TaUsm4v5h_B31_BFuG-ap2gF?usp=sharing) for optimizing model to run in browser.
+
 ## Run
 
 use `uv run chat.py` to evaluate latest model. It is not chat, just prompting (text completion).
