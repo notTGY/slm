@@ -32,7 +32,7 @@ Only good to go experiments, others I'm still considering if are good enough for
 ### gpt\_neo\_wikitext2
 Same dataset, gpt neo archtecture as seen in [Tiny Stories paper]
 
-Perplexity on holdout dataset: 1364.45
+Perplexity on holdout dataset: 1061.24
 
 ### gpt\_neo\_tiny\_stories
 Tiny stories dataset, gpt neo, hyperparameters all as seen in [Tiny Stories paper]
