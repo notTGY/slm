@@ -136,7 +136,7 @@ def eval_model(model, tokenizer):
         print(f"Validation Perplexity: {torch.exp(val_loss).item():.2f}")
 
 
-def main(max_steps=-1, num_samples=5500, batch_size=32, seq_len=64, epochs=1):
+def main(max_steps=-1, num_samples=1058740, batch_size=32, seq_len=64, epochs=1):
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neo-125M")
     tokenizer.pad_token_id = tokenizer.eos_token_id
