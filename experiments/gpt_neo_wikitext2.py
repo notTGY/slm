@@ -77,7 +77,7 @@ class LightningTransformer(LightningModule):
         return loss
 
     def configure_optimizers(self) -> torch.optim.Optimizer:
-        return torch.optim.SGD(self.model.parameters(), lr=0.1)
+        return torch.optim.Adam(self.model.parameters(), lr=3e-4)
 
 
 eval_texts = [
@@ -136,7 +136,7 @@ def eval_model(model, tokenizer):
         print(f"Validation Perplexity: {torch.exp(val_loss).item():.2f}")
 
 
-def main(max_steps=-1, num_samples=10, batch_size=32, seq_len=64, epochs=1):
+def main(max_steps=-1, num_samples=40000, batch_size=32, seq_len=64, epochs=1):
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neo-125M")
     tokenizer.pad_token_id = tokenizer.eos_token_id
