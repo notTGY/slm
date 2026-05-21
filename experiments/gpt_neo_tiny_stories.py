@@ -77,7 +77,7 @@ class LightningTransformer(LightningModule):
         return loss
 
     def configure_optimizers(self) -> torch.optim.Optimizer:
-        return torch.optim.SGD(self.model.parameters(), lr=0.1)
+        return torch.optim.Adam(self.model.parameters(), lr=3e-4)
 
 
 eval_texts = [
