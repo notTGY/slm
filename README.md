@@ -58,7 +58,7 @@ with 100 max steps on first 10 samples from dataset.
 By default num\_samples is picked according to [Chinchilla scaling laws]  ~ 20 tokens per 1 trainable parameter.
 Run script is based around the idea that just `uv run main.py` would run full training of the latest (best) model without extra thinking.
 
-`uvx tensorboard --logdir lightning_logs/` to watch at the curves.
+`uv run tensorboard --logdir lightning_logs/` to watch at the curves.
 
 
 See [onnx notebook](https://colab.research.google.com/drive/1fwTNiZS1TaUsm4v5h_B31_BFuG-ap2gF?usp=sharing) for optimizing model to run in browser.
