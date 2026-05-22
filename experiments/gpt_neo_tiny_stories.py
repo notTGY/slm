@@ -76,8 +76,23 @@ class LightningTransformer(LightningModule):
         self.log("train_loss", loss)
         return loss
 
-    def configure_optimizers(self) -> torch.optim.Optimizer:
-        return torch.optim.Adam(self.model.parameters(), lr=3e-4)
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.model.parameters(), lr=3e-4)
+
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer,
+            T_max=self.trainer.estimated_stepping_batches,
+            eta_min=3e-6,
+        )
+
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": {
+                "scheduler": scheduler,
+                "interval": "step",
+                "frequency": 1,
+            },
+        }
 
 
 eval_texts = [
