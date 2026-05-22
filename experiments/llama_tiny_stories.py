@@ -154,7 +154,7 @@ def eval_model(model, tokenizer):
 def main(max_steps=-1, num_samples=10000, batch_size=32, seq_len=64, epochs=1):
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neo-125M")
-    tokenizer.pad_token_id = tokenizer.eos_token_id
+    tokenizer.pad_token = tokenizer.eos_token
 
     dataset = TinyStories(tokenizer, num_samples=num_samples, seq_len=seq_len)
     print(f"Dataset tokens: {len(dataset) + seq_len}")
