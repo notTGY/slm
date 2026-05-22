@@ -164,7 +164,7 @@ def main(max_steps=-1, num_samples=10000, batch_size=32, seq_len=64, epochs=1):
     config = LlamaConfig(
         vocab_size=len(tokenizer),
         hidden_size=64,
-        intermediate_size=192,
+        intermediate_size=128,
         num_hidden_layers=8,
         num_attention_heads=16,
         num_key_value_heads=16,
