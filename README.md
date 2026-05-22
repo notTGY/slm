@@ -42,7 +42,7 @@ Perplexity on holdout dataset: 25.39
 ### gpt\_neo\_babylm
 Babylm dataset, gpt neo, hyperparameters all as seen in [Tiny Stories paper]. More info about [Babylm challenge] and [Babylm dataset]
 
-Perplexity on holdout dataset: 49.46
+Perplexity on holdout dataset: 35.12
 
 ## Dev
 
