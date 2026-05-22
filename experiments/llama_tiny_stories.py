@@ -9,7 +9,7 @@ from torch import Tensor
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, Dataset
 
-from transformers import AutoTokenizer, GPTNeoConfig, GPTNeoForCausalLM
+from transformers import AutoTokenizer, LlamaConfig, LlamaForCausalLM
 from datasets import load_dataset
 
 
@@ -58,7 +58,7 @@ class TinyStories(Dataset):
 class LightningTransformer(LightningModule):
     def __init__(self, config) -> None:
         super().__init__()
-        self.model = GPTNeoForCausalLM(config)
+        self.model = LlamaForCausalLM(config)
         self.vocab_size = config.vocab_size
 
     def generate(self, *args, **kwargs):
@@ -161,11 +161,19 @@ def main(max_steps=-1, num_samples=10000, batch_size=32, seq_len=64, epochs=1):
     print(f"Learn tokens: {len(dataset) * seq_len * epochs}")
     train_dataloader = DataLoader(dataset, num_workers=7, batch_size=batch_size)
 
-    config = GPTNeoConfig(
+    config = LlamaConfig(
+        vocab_size=len(tokenizer),
         hidden_size=64,
-        num_heads=16,
-        num_layers=8,
-        attention_types=[[["global", "local"], 4]],
+        intermediate_size=192,
+        num_hidden_layers=8,
+        num_attention_heads=16,
+        num_key_value_heads=16,
+
+        bos_token_id=tokenizer.bos_token_id,
+        eos_token_id=tokenizer.eos_token_id,
+        pad_token_id=tokenizer.pad_token_id,
+
+        max_position_embeddings=4096,
     )
     # print("Model Config:", config.to_json_string())
     model = LightningTransformer(config)
