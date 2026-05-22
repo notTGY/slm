@@ -44,6 +44,11 @@ Babylm dataset, gpt neo, hyperparameters all as seen in [Tiny Stories paper]. Mo
 
 Perplexity on holdout dataset: 35.12
 
+### llama\_tiny\_stories
+Tiny stories dataset, llama model, gpt neo tokenizer. ~2x parameters from gpt\_neo based models
+
+Perplexity on holdout dataset: 28.70
+
 ## Dev
 
 `uv sync` to install deps.
