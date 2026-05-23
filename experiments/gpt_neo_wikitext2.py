@@ -57,10 +57,10 @@ class Wikitext(Dataset):
 
 
 class LightningTransformer(LightningModule):
-    def __init__(self, config) -> None:
+    def __init__(self, model, vocab_size) -> None:
         super().__init__()
-        self.model = GPTNeoForCausalLM(config)
-        self.vocab_size = config.vocab_size
+        self.model = model
+        self.vocab_size = vocab_size
 
     def generate(self, *args, **kwargs):
         return self.model.generate(*args, **kwargs)
@@ -98,7 +98,8 @@ def main(max_steps=-1, num_samples=36718, batch_size=32, seq_len=64, epochs=1):
         attention_types=[[["global", "local"], 4]],
     )
     # print("Model Config:", config.to_json_string())
-    model = LightningTransformer(config)
+    _model = GPTNeoForCausalLM(config)
+    model = LightningTransformer(_model, config.vocab_size)
 
     checkpoint_callback = ModelCheckpoint(
         dirpath="checkpoints/",
