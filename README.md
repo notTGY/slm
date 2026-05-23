@@ -1,5 +1,7 @@
 # slm
 
+## The plan
+
 The plan according to [Karpathys' post]:
 1. generate small dataset using synthetic dataset technique described in [HumanEval paper]
 2. Baselines on HumanEval:
@@ -9,6 +11,9 @@ The plan according to [Karpathys' post]:
     4. gpt2 overfitting one batch
 3. Try scaling baseline model, verify this helps with test
 
+## The plan B
+
+The real plan is to do something meaningful. If this means going off the beaten path, I'm in.
 
 ## Holdout Dataset for testing small models Perplexity
 
@@ -60,7 +65,6 @@ Perplexity on holdout dataset: 32.92
 
 `uv run main.py --max_steps=100 --num_samples=10` launches latest edited experiment from `experiments/` folder
 with 100 max steps on first 10 samples from dataset.
-By default num\_samples is picked according to [Chinchilla scaling laws]  ~ 20 tokens per 1 trainable parameter.
 Run script is based around the idea that just `uv run main.py` would run full training of the latest (best) model without extra thinking.
 
 `uv run tensorboard --logdir lightning_logs/` to watch at the curves.
