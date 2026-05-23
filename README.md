@@ -49,6 +49,11 @@ Tiny stories dataset, llama model, gpt neo tokenizer. ~2x parameters from gpt\_n
 
 Perplexity on holdout dataset: 28.70
 
+### llama\_babylm
+Babylm dataset, llama model, gpt neo tokenizer. ~2x parameters from gpt\_neo based models. More info about [Babylm challenge] and [Babylm dataset]
+
+Perplexity on holdout dataset: 32.92
+
 ## Dev
 
 `uv sync` to install deps.
