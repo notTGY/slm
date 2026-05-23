@@ -1,4 +1,3 @@
-#!/usr/bin/env -S uv run
 import os
 import sys
 import re

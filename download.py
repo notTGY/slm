@@ -1,4 +1,3 @@
-#!/usr/bin/env -S uv run
 import sys
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
