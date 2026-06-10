@@ -128,7 +128,7 @@ def main(max_steps=-1, num_samples=60000, batch_size=32, seq_len=64, epochs=1):
 
     checkpoint_callback = ModelCheckpoint(
         dirpath="checkpoints/",
-        filename="gpt-neo-tinystories-{step:06d}",
+        filename="llama-tinystories-{step:06d}",
         every_n_train_steps=1000,
         save_top_k=3,
         monitor="train_loss",

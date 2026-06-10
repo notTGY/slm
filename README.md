@@ -59,6 +59,13 @@ Babylm dataset, llama model, gpt neo tokenizer. ~2x parameters from gpt\_neo bas
 
 Perplexity on holdout dataset: 32.92
 
+
+### gpt\_neo\_cria
+
+Gpt Neo on cria dataset, generated with https://colab.research.google.com/drive/1_IOM6-YkT0F47TcQn_JFqMxsogF4DOaf?usp=sharing
+
+Perplexity on holdout dataset: 9.99
+
 ## Dev
 
 `uv sync` to install deps.

@@ -13,7 +13,8 @@ from transformers import AutoTokenizer, LlamaConfig, LlamaForCausalLM
 from datasets import load_dataset
 from lib.eval import eval_model
 
-class Babylm10M(Dataset):
+
+class Cria(Dataset):
     def __init__(
         self,
         tokenizer,
@@ -21,7 +22,7 @@ class Babylm10M(Dataset):
         seq_len: int = 33,
     ) -> None:
         super().__init__()
-        self.ds = load_dataset("nilq/babylm-10M")
+        self.ds = load_dataset("mikeoxmaul/cria")
         self.dataset = list(self.ds["train"].take(num_samples))
 
         self.data = [tokenizer.encode(i["text"]) for i in self.dataset]
@@ -95,12 +96,12 @@ class LightningTransformer(LightningModule):
         }
 
 
-def main(max_steps=-1, num_samples=1058740, batch_size=32, seq_len=64, epochs=1):
+def main(max_steps=-1, num_samples=25077, batch_size=32, seq_len=64, epochs=1):
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neo-125M")
-    tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.pad_token_id = tokenizer.eos_token_id
 
-    dataset = Babylm10M(tokenizer, num_samples=num_samples, seq_len=seq_len)
+    dataset = Cria(tokenizer, num_samples=num_samples, seq_len=seq_len)
     print(f"Dataset tokens: {len(dataset) + seq_len}")
     print(f"Learn tokens: {len(dataset) * seq_len * epochs}")
     train_dataloader = DataLoader(dataset, num_workers=7, batch_size=batch_size)
@@ -127,13 +128,14 @@ def main(max_steps=-1, num_samples=1058740, batch_size=32, seq_len=64, epochs=1)
 
     checkpoint_callback = ModelCheckpoint(
         dirpath="checkpoints/",
-        filename="llama-babylm-{step:06d}",
+        filename="llama-cria-{step:06d}",
         every_n_train_steps=1000,
         save_top_k=3,
         monitor="train_loss",
         mode="min",
         save_last=True,
     )
+
 
     trainer = L.Trainer(
         max_epochs=epochs,
