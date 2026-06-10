@@ -66,6 +66,13 @@ Gpt Neo on cria dataset, generated with https://colab.research.google.com/drive/
 
 Perplexity on holdout dataset: 9.99
 
+
+### llama\_cria
+
+Llama on cria dataset, generated with https://colab.research.google.com/drive/1_IOM6-YkT0F47TcQn_JFqMxsogF4DOaf?usp=sharing
+
+Perplexity on holdout dataset: 16.04
+
 ## Dev
 
 `uv sync` to install deps.
