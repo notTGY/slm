@@ -14,7 +14,7 @@ from datasets import load_dataset
 from lib.eval import eval_model
 
 
-class Alpaca(Dataset):
+class Cria(Dataset):
     def __init__(
         self,
         tokenizer,
@@ -22,7 +22,7 @@ class Alpaca(Dataset):
         seq_len: int = 33,
     ) -> None:
         super().__init__()
-        self.ds = load_dataset("tatsu-lab/alpaca")
+        self.ds = load_dataset("mike-oxmaul/cria")
         self.dataset = list(self.ds["train"].take(num_samples))
 
         self.data = [tokenizer.encode(i["text"]) for i in self.dataset]
@@ -77,16 +77,31 @@ class LightningTransformer(LightningModule):
         self.log("train_loss", loss)
         return loss
 
-    def configure_optimizers(self) -> torch.optim.Optimizer:
-        return torch.optim.SGD(self.model.parameters(), lr=0.1)
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.model.parameters(), lr=3e-4)
+
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer,
+            T_max=self.trainer.estimated_stepping_batches,
+            eta_min=3e-6,
+        )
+
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": {
+                "scheduler": scheduler,
+                "interval": "step",
+                "frequency": 1,
+            },
+        }
 
 
-def main(max_steps=-1, num_samples=100, batch_size=1, seq_len=1024, epochs=1):
+def main(max_steps=-1, num_samples=25077, batch_size=32, seq_len=64, epochs=1):
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neo-125M")
     tokenizer.pad_token_id = tokenizer.eos_token_id
 
-    dataset = Alpaca(tokenizer, num_samples=num_samples, seq_len=seq_len)
+    dataset = Cria(tokenizer, num_samples=num_samples, seq_len=seq_len)
     print(f"Dataset tokens: {len(dataset) + seq_len}")
     print(f"Learn tokens: {len(dataset) * seq_len * epochs}")
     train_dataloader = DataLoader(dataset, num_workers=7, batch_size=batch_size)
@@ -103,7 +118,7 @@ def main(max_steps=-1, num_samples=100, batch_size=1, seq_len=1024, epochs=1):
 
     checkpoint_callback = ModelCheckpoint(
         dirpath="checkpoints/",
-        filename="gpt-neo-alpaca-{step:06d}",
+        filename="gpt-neo-cria-{step:06d}",
         every_n_train_steps=1000,
         save_top_k=3,
         monitor="train_loss",
