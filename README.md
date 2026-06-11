@@ -31,7 +31,7 @@ To evaluate model run `uv run download.py` and pass huggingface repo with model 
 For example: `mikeoxmaul/zmeeust-w`
 
 
-## Experiments (in order of creation)
+## PT Experiments (in order of creation)
 Only good to go experiments, others I'm still considering if are good enough for learning/evaluation purposes.
 
 ### gpt\_neo\_wikitext2
@@ -72,6 +72,15 @@ Perplexity on holdout dataset: 9.99
 Llama on cria dataset, generated with https://colab.research.google.com/drive/1_IOM6-YkT0F47TcQn_JFqMxsogF4DOaf?usp=sharing
 
 Perplexity on holdout dataset: 16.04
+
+
+## FT experiments
+
+### llama\_cria
+
+We take llama\_babylm and finetune on cria dataset
+
+Perplexity on holdout dataset: -
 
 ## Dev
 

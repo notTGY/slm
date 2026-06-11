@@ -12,7 +12,7 @@ parser.add_argument("--batch_size")
 parser.add_argument("--seq_len")
 parser.add_argument("--epochs")
 
-base = "experiments"
+base = "ft"
 
 if __name__ == "__main__":
     args = parser.parse_args()
