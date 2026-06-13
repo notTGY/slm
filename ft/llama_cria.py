@@ -13,6 +13,19 @@ from transformers import AutoTokenizer, LlamaConfig, LlamaForCausalLM
 from datasets import load_dataset
 from lib.eval import eval_model
 
+chat_template = (
+    "{% for message in messages %}"
+    "{% if message['role'] == 'system' %}"
+    "{{ message['content'] }}\n\n"
+    "{% elif message['role'] == 'user' %}"
+    "User: {{ message['content'] }}\n"
+    "{% elif message['role'] == 'assistant' %}"
+    "Assistant: {{ message['content'] }}{% if not loop.last %}\n{% endif %}"
+    "{% endif %}"
+    "{% endfor %}"
+    "{% if add_generation_prompt %}Assistant: {% endif %}"
+)
+
 
 class Cria(Dataset):
     def __init__(
@@ -25,7 +38,15 @@ class Cria(Dataset):
         self.ds = load_dataset("mikeoxmaul/cria")
         self.dataset = list(self.ds["train"].take(num_samples))
 
-        self.data = [tokenizer.encode(i["text"]) for i in self.dataset]
+        def create_prompt(d):
+          messages = [
+            {'role': 'system', 'content': d['instruction']},
+            {'role': 'user', 'content': d['input']},
+            {'role': 'assistant', 'content': d['output']},
+          ]
+          return tokenizer.apply_chat_template(messages)
+
+        self.data = [create_prompt(i) for i in self.dataset]
         eos_id = tokenizer.eos_token_id
         self.data = [d + [eos_id] for d in self.data]
         self.cum_lengths = [0]
@@ -100,6 +121,19 @@ def main(max_steps=-1, num_samples=25077, batch_size=32, seq_len=64, epochs=1):
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neo-125M")
     tokenizer.pad_token_id = tokenizer.eos_token_id
+    chat_template = (
+        "{% for message in messages %}"
+        "{% if message['role'] == 'system' %}"
+        "{{ message['content'] }}\n\n"
+        "{% elif message['role'] == 'user' %}"
+        "User: {{ message['content'] }}\n"
+        "{% elif message['role'] == 'assistant' %}"
+        "Assistant: {{ message['content'] }}{% if not loop.last %}\n{% endif %}"
+        "{% endif %}"
+        "{% endfor %}"
+        "{% if add_generation_prompt %}Assistant: {% endif %}"
+    )
+    tokenizer.chat_template = chat_template
 
     dataset = Cria(tokenizer, num_samples=num_samples, seq_len=seq_len)
     print(f"Dataset tokens: {len(dataset) + seq_len}")
