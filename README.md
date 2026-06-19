@@ -80,7 +80,7 @@ Perplexity on holdout dataset: 16.04
 
 We take llama\_babylm and finetune on cria dataset
 
-Perplexity on holdout dataset: 17.65
+Perplexity on holdout dataset: 17.60
 
 ## Dev
 
