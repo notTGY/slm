@@ -2,3 +2,5 @@
 lightning_logs
 checkpoints
 data
+runs
+rl-*
