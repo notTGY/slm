@@ -6,59 +6,94 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 MODEL = os.environ.get("MODEL", "mikeoxmaul/zmeeust-bcl")
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
+def first_line(x):
+    return x.strip().splitlines()[0].strip() if x.strip() else ""
+
+def has_word(x, word):
+    return re.search(rf"\b{re.escape(word)}\b", x.lower()) is not None
+
+def has_any(x, words):
+    return any(has_word(x, w) for w in words)
+
 tests = [
     {
-        "name": "letter_o",
-        "prompt": "Complete: hell",
-        "check": lambda x: x.strip().lower().startswith("o"),
+        "name": "list_shape",
+        "prompt": "Write a short list.",
+        "check": lambda x: (
+            re.search(r"(?m)^\s*[-*]\s+\S+", x) is not None
+            or re.search(r"(?m)^\s*\d+[\.\)]\s+\S+", x) is not None
+            or "," in x
+        ),
     },
     {
         "name": "copy_word",
-        "prompt": "Repeat exactly: cat\nAnswer:",
-        "check": lambda x: "cat" in x.lower(),
+        "prompt": "Copy this word: banana",
+        "check": lambda x: has_word(first_line(x), "banana"),
     },
     {
-        "name": "yes_no",
-        "prompt": "Answer yes or no. Is fire hot?\nAnswer:",
-        "check": lambda x: x.strip().lower().startswith("yes"),
+        "name": "common_fact",
+        "prompt": "What animal says woof?",
+        "check": lambda x: has_word(first_line(x), "dog"),
     },
     {
-        "name": "single_digit",
-        "prompt": "What is 1 + 1? Answer with one digit.\nAnswer:",
-        "check": lambda x: x.strip().startswith("2"),
+        "name": "simple_color",
+        "prompt": "What color is grass?",
+        "check": lambda x: has_word(first_line(x), "green"),
     },
     {
-        "name": "choose_a",
-        "prompt": "Choose the correct answer.\nQuestion: Which letter comes first, A or B?\nAnswer:",
-        "check": lambda x: x.strip().lower().startswith("a"),
+        "name": "tiny_math",
+        "prompt": "What is 1 + 1?",
+        "check": lambda x: re.match(r"^\s*2\b", x) is not None,
+    },
+    {
+        "name": "simple_code",
+        "prompt": "Write Python code to print hi.",
+        "check": lambda x: "print" in x.lower() and "hi" in x.lower(),
     },
 ]
 
 tok = AutoTokenizer.from_pretrained(MODEL)
+if tok.chat_template is None:
+    tok.chat_template = (
+        "{% for message in messages %}"
+        "{% if message['role'] == 'system' %}"
+        "{{ message['content'] }}\n\n"
+        "{% elif message['role'] == 'user' %}"
+        "User: {{ message['content'] }}\n"
+        "{% elif message['role'] == 'assistant' %}"
+        "Assistant: {{ message['content'] }}{% if not loop.last %}\n{% endif %}"
+        "{% endif %}"
+        "{% endfor %}"
+        "{% if add_generation_prompt %}Assistant: {% endif %}"
+    )
+    print("setting chat template")
 if tok.pad_token is None:
     tok.pad_token = tok.eos_token
 
 model = AutoModelForCausalLM.from_pretrained(
     MODEL,
-    torch_dtype=torch.float16 if DEVICE == "cuda" else torch.float32,
+    dtype=torch.float16 if DEVICE == "cuda" else torch.float32,
 ).to(DEVICE)
 
 model.eval()
 
 for test in tests:
     wins = 0
-    samples = []
+    ok_samples = []
+    not_ok_samples = []
 
-    for _ in range(20):
-        inputs = tok(test["prompt"], return_tensors="pt").to(DEVICE)
+    N=20
+    for _ in range(N):
+        text = tok.apply_chat_template([{ "role": "user", "content": test["prompt"] }], tokenize=False, add_generation_prompt=True)
+        inputs = tok(text, return_tensors="pt").to(DEVICE)
 
         with torch.no_grad():
             out = model.generate(
                 **inputs,
                 max_new_tokens=8,
                 do_sample=True,
-                temperature=1.2,
-                top_p=0.95,
+                temperature=0.7,
+                top_p=0.9,
                 pad_token_id=tok.eos_token_id,
             )
 
@@ -66,8 +101,10 @@ for test in tests:
         ok = test["check"](gen)
 
         wins += int(ok)
+        samples = ok_samples if ok else not_ok_samples
         samples.append(gen.replace("\n", "\\n"))
 
     print()
-    print(test["name"], f"{wins}/20")
-    print(samples[:5])
+    print(test["prompt"], f"[{wins}/{N}]")
+    print("OK: ", ok_samples[:5])
+    print("NOT OK: ", not_ok_samples[:5])
