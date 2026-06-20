@@ -105,7 +105,7 @@ def main():
     )
 
     trainer.train()
-    # trainer.save_model(OUT)
+    trainer.save_model(OUT)
 
 
 if __name__ == "__main__":
