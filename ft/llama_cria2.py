@@ -6,7 +6,6 @@ from lightning.pytorch.callbacks import ModelCheckpoint
 
 import torch
 from torch import Tensor
-import torch.nn.functional as F
 from torch.utils.data import DataLoader, Dataset
 
 from transformers import AutoTokenizer, LlamaConfig, LlamaForCausalLM
@@ -27,58 +26,64 @@ class Cria(Dataset):
         self,
         tokenizer,
         num_samples: int,
-        seq_len: int = 33,
+        max_length: int = 512,
     ) -> None:
         super().__init__()
         self.ds = load_dataset("mikeoxmaul/cria2")
         self.dataset = list(self.ds["train"].take(num_samples))
-
-        def compute_mask(d):
-          c = d['instruction']
-          if d['input']:
-            c += '\n\n' + d['input']
-          messages = [
-            {'role': 'user', 'content': c},
-          ]
-          prompt_length = len(tokenizer.apply_chat_template(messages, add_generation_prompt=True).input_ids)
-          messages = [
-            {'role': 'user', 'content': c},
-            {'role': 'assistant', 'content': d['output']},
-          ]
-          total_legth = len(tokenizer.apply_chat_template(messages).input_ids) + 1 # +1 for eos token
-          return prompt_length, total_length
-
-        self.data = [tokenizer.encode(i['text']) for i in self.dataset]
-        # self.masks = [compute_mask(i) for i in self.dataset]
         eos_id = tokenizer.eos_token_id
-        self.data = [d + [eos_id] for d in self.data]
-        self.cum_lengths = [0]
-        for d in self.data:
-            self.cum_lengths.append(self.cum_lengths[-1] + len(d))
 
-        self.seq_len = seq_len
+        self.data = []
+        for d in self.dataset:
+            content = d["instruction"]
+            if d["input"]:
+                content += "\n\n" + d["input"]
+
+            prompt_messages = [{"role": "user", "content": content}]
+            full_messages = [
+                {"role": "user", "content": content},
+                {"role": "assistant", "content": d["output"]},
+            ]
+
+            prompt_ids = tokenizer.apply_chat_template(
+                prompt_messages,
+                add_generation_prompt=True,
+            )
+            input_ids = tokenizer.apply_chat_template(full_messages) + [eos_id]
+            input_ids = input_ids[:max_length]
+
+            labels = input_ids.copy()
+            prompt_length = min(len(prompt_ids), len(labels))
+            labels[:prompt_length] = [-100] * prompt_length
+            if all(label == -100 for label in labels):
+                continue
+
+            self.data.append({"input_ids": input_ids, "labels": labels})
 
     def __len__(self) -> int:
-        total_length = self.cum_lengths[-1]
-        return max(1, total_length - self.seq_len)
+        return len(self.data)
 
-    def __getitem__(self, index: int) -> tuple[Tensor, Tensor]:
-        start = index
-        end = start + self.seq_len + 1  # +1 for target
-        tokens = []
-        for i in range(len(self.data)):
-            story_start = self.cum_lengths[i]
-            story_end = self.cum_lengths[i + 1]
-            if story_end > start:
-                local_start = max(0, start - story_start)
-                local_end = min(len(self.data[i]), end - story_start)
-                tokens.extend(self.data[i][local_start:local_end])
-                if len(tokens) >= self.seq_len + 1:
-                    break
-        inputs = torch.tensor(tokens[: self.seq_len])
-        target = torch.tensor(tokens[1 : self.seq_len + 1])
-        # masks = ?
-        return inputs, target #, masks
+    def __getitem__(self, index: int) -> dict[str, list[int]]:
+        return self.data[index]
+
+
+def collate_batch(batch: list[dict[str, list[int]]], pad_token_id: int) -> dict[str, Tensor]:
+    max_length = max(len(item["input_ids"]) for item in batch)
+    input_ids = []
+    labels = []
+    attention_mask = []
+
+    for item in batch:
+        pad_length = max_length - len(item["input_ids"])
+        input_ids.append(item["input_ids"] + [pad_token_id] * pad_length)
+        labels.append(item["labels"] + [-100] * pad_length)
+        attention_mask.append([1] * len(item["input_ids"]) + [0] * pad_length)
+
+    return {
+        "input_ids": torch.tensor(input_ids),
+        "labels": torch.tensor(labels),
+        "attention_mask": torch.tensor(attention_mask),
+    }
 
 
 class LightningTransformer(LightningModule):
@@ -90,15 +95,12 @@ class LightningTransformer(LightningModule):
     def generate(self, *args, **kwargs):
         return self.model.generate(*args, **kwargs)
 
-    def forward(self, inputs: Tensor, target: Tensor) -> Tensor:
-        logits = self.model(inputs).logits
-        log_probs = F.log_softmax(logits, dim=-1)
-        return log_probs.view(-1, self.vocab_size)
+    def forward(self, **batch) -> Tensor:
+        return self.model(**batch)
 
-    def training_step(self, batch: tuple[Tensor, Tensor], batch_idx: int) -> Tensor:
-        inputs, target = batch
-        output = self(inputs, target)
-        loss = torch.nn.functional.nll_loss(output, target.view(-1))
+    def training_step(self, batch: dict[str, Tensor], batch_idx: int) -> Tensor:
+        output = self(**batch)
+        loss = output.loss
         self.log("train_loss", loss)
         return loss
 
@@ -121,16 +123,21 @@ class LightningTransformer(LightningModule):
         }
 
 
-def main(max_steps=-1, num_samples=23941, batch_size=32, seq_len=64, epochs=1):
+def main(max_steps=-1, num_samples=23941, batch_size=32, max_length=512, epochs=1):
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neo-125M")
     tokenizer.pad_token_id = tokenizer.eos_token_id
     tokenizer.chat_template = chat_template
 
-    dataset = Cria(tokenizer, num_samples=num_samples, seq_len=seq_len)
-    print(f"Dataset tokens: {len(dataset) + seq_len}")
-    print(f"Learn tokens: {len(dataset) * seq_len * epochs}")
-    train_dataloader = DataLoader(dataset, num_workers=7, batch_size=batch_size)
+    dataset = Cria(tokenizer, num_samples=num_samples, max_length=max_length)
+    print(f"Dataset samples: {len(dataset)}")
+    print(f"Learn samples: {len(dataset) * epochs}")
+    train_dataloader = DataLoader(
+        dataset,
+        num_workers=7,
+        batch_size=batch_size,
+        collate_fn=lambda batch: collate_batch(batch, tokenizer.pad_token_id),
+    )
 
     vocab_size = len(tokenizer)
 
