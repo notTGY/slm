@@ -50,6 +50,7 @@ class Cria(Dataset):
                 add_generation_prompt=True,
             )
             input_ids = tokenizer.apply_chat_template(full_messages) + [eos_id]
+            is_ok = input_ids[:len(prompt_ids)] == prompt_ids
             input_ids = input_ids[:max_length]
 
             labels = input_ids.copy()
@@ -57,8 +58,10 @@ class Cria(Dataset):
             labels[:prompt_length] = [-100] * prompt_length
             if all(label == -100 for label in labels):
                 continue
+            
 
-            self.data.append({"input_ids": input_ids, "labels": labels})
+            if is_ok:
+                self.data.append({"input_ids": input_ids, "labels": labels})
 
     def __len__(self) -> int:
         return len(self.data)
