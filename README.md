@@ -87,7 +87,7 @@ Perplexity on holdout dataset: 17.60
 We take llama\_babylm and finetune on cria2 dataset
 [cria2 dataset](https://colab.research.google.com/drive/1GCFtSX7QRKYTFNDeKsSyuILQ2TLiTQ5z#scrollTo=XitKk5yFSfBn)
 
-Perplexity on holdout dataset: -
+Perplexity on holdout dataset: 28.94
 
 ## Dev
 

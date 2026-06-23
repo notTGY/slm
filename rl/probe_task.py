@@ -3,7 +3,7 @@ import re
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-MODEL = os.environ.get("MODEL", "mikeoxmaul/zmeeust-bcl")
+MODEL = os.environ.get("MODEL", "mikeoxmaul/zmeeust-bc2l")
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 def first_line(x):
