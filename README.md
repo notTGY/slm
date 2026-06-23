@@ -62,14 +62,14 @@ Perplexity on holdout dataset: 32.92
 
 ### gpt\_neo\_cria
 
-Gpt Neo on cria dataset, generated with https://colab.research.google.com/drive/1_IOM6-YkT0F47TcQn_JFqMxsogF4DOaf?usp=sharing
+Gpt Neo on cria dataset, generated with [cria notebook](https://colab.research.google.com/drive/1_IOM6-YkT0F47TcQn_JFqMxsogF4DOaf?usp=sharing)
 
 Perplexity on holdout dataset: 9.99
 
 
 ### llama\_cria
 
-Llama on cria dataset, generated with https://colab.research.google.com/drive/1_IOM6-YkT0F47TcQn_JFqMxsogF4DOaf?usp=sharing
+Llama on cria dataset, generated with [cria notebook](https://colab.research.google.com/drive/1_IOM6-YkT0F47TcQn_JFqMxsogF4DOaf?usp=sharing)
 
 Perplexity on holdout dataset: 16.04
 
@@ -81,6 +81,13 @@ Perplexity on holdout dataset: 16.04
 We take llama\_babylm and finetune on cria dataset
 
 Perplexity on holdout dataset: 17.60
+
+### llama\_cria2
+
+We take llama\_babylm and finetune on cria2 dataset
+[cria2 dataset](https://colab.research.google.com/drive/1GCFtSX7QRKYTFNDeKsSyuILQ2TLiTQ5z#scrollTo=XitKk5yFSfBn)
+
+Perplexity on holdout dataset: -
 
 ## Dev
 
