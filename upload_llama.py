@@ -6,6 +6,13 @@ from transformers import AutoTokenizer, LlamaConfig, LlamaForCausalLM
 from lightning import LightningModule
 from huggingface_hub import HfApi, create_repo
 
+chat_template = """{% for message in messages %}
+{{ '<|endoftext|>' }}{{ message['role'] | capitalize }}:
+{{ message['content'] }}
+{% endfor %}
+{% if add_generation_prompt %}
+{{ '<|endoftext|>' }}Assistant:
+{% endif %}"""
 
 class Model(LightningModule):
     def __init__(self, config):
@@ -94,6 +101,7 @@ def main():
 
 
     tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neo-125M")
+    tokenizer.chat_template = chat_template
 
     # Load model configuration
     config = LlamaConfig(
