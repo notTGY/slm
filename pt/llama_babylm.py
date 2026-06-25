@@ -91,7 +91,7 @@ def main(max_steps=-1, num_samples=1058740, batch_size=32, seq_len=64, epochs=1)
     dataset = Babylm10M(tokenizer, num_samples=num_samples, seq_len=seq_len)
     print(f"Dataset tokens: {len(dataset.tokens)}")
     print(f"Learn tokens: {len(dataset) * seq_len * epochs}")
-    train_dataloader = DataLoader(dataset, num_workers=7, batch_size=batch_size)
+    train_dataloader = DataLoader(dataset, num_workers=0, batch_size=batch_size)
 
     vocab_size = len(tokenizer)
 
