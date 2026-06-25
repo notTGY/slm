@@ -32,12 +32,13 @@ class Babylm10M(Dataset):
 
         self.seq_len = seq_len
         self.tokens = torch.tensor(token_ids, dtype=torch.long)
+        self.stride = self.seq_len
 
     def __len__(self) -> int:
-        return max(1, (len(self.tokens) - 1) // self.seq_len)
+        return max(1, (len(self.tokens) - self.seq_len - 1) // self.stride + 1)
 
     def __getitem__(self, index: int) -> tuple[Tensor, Tensor]:
-        start = index * self.seq_len
+        start = index * self.stride
         end = start + self.seq_len + 1  # +1 for target
         tokens = self.tokens[start:end]
         inputs = tokens[: self.seq_len]
@@ -83,7 +84,7 @@ class LightningTransformer(LightningModule):
         }
 
 
-def main(max_steps=-1, num_samples=1058740, batch_size=32, seq_len=64, epochs=1):
+def main(max_steps=-1, num_samples=1058740, batch_size=32, seq_len=64, epochs=8):
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neo-125M")
     tokenizer.pad_token = tokenizer.eos_token
@@ -91,7 +92,7 @@ def main(max_steps=-1, num_samples=1058740, batch_size=32, seq_len=64, epochs=1)
     dataset = Babylm10M(tokenizer, num_samples=num_samples, seq_len=seq_len)
     print(f"Dataset tokens: {len(dataset.tokens)}")
     print(f"Learn tokens: {len(dataset) * seq_len * epochs}")
-    train_dataloader = DataLoader(dataset, num_workers=0, batch_size=batch_size)
+    train_dataloader = DataLoader(dataset, num_workers=7, batch_size=batch_size)
 
     vocab_size = len(tokenizer)
 
