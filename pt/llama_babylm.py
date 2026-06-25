@@ -24,34 +24,24 @@ class Babylm10M(Dataset):
         self.ds = load_dataset("nilq/babylm-10M")
         self.dataset = list(self.ds["train"].take(num_samples))
 
-        self.data = [tokenizer.encode(i["text"]) for i in self.dataset]
         eos_id = tokenizer.eos_token_id
-        self.data = [d + [eos_id] for d in self.data]
-        self.cum_lengths = [0]
-        for d in self.data:
-            self.cum_lengths.append(self.cum_lengths[-1] + len(d))
+        token_ids = []
+        for item in self.dataset:
+            token_ids.extend(tokenizer.encode(item["text"]))
+            token_ids.append(eos_id)
 
         self.seq_len = seq_len
+        self.tokens = torch.tensor(token_ids, dtype=torch.long)
 
     def __len__(self) -> int:
-        total_length = self.cum_lengths[-1]
-        return max(1, total_length - self.seq_len)
+        return max(1, (len(self.tokens) - 1) // self.seq_len)
 
     def __getitem__(self, index: int) -> tuple[Tensor, Tensor]:
-        start = index
+        start = index * self.seq_len
         end = start + self.seq_len + 1  # +1 for target
-        tokens = []
-        for i in range(len(self.data)):
-            story_start = self.cum_lengths[i]
-            story_end = self.cum_lengths[i + 1]
-            if story_end > start:
-                local_start = max(0, start - story_start)
-                local_end = min(len(self.data[i]), end - story_start)
-                tokens.extend(self.data[i][local_start:local_end])
-                if len(tokens) >= self.seq_len + 1:
-                    break
-        inputs = torch.tensor(tokens[: self.seq_len])
-        target = torch.tensor(tokens[1 : self.seq_len + 1])
+        tokens = self.tokens[start:end]
+        inputs = tokens[: self.seq_len]
+        target = tokens[1 : self.seq_len + 1]
         return inputs, target
 
 
@@ -65,14 +55,12 @@ class LightningTransformer(LightningModule):
         return self.model.generate(*args, **kwargs)
 
     def forward(self, inputs: Tensor, target: Tensor) -> Tensor:
-        logits = self.model(inputs).logits
-        log_probs = F.log_softmax(logits, dim=-1)
-        return log_probs.view(-1, self.vocab_size)
+        return self.model(inputs).logits
 
     def training_step(self, batch: tuple[Tensor, Tensor], batch_idx: int) -> Tensor:
         inputs, target = batch
-        output = self(inputs, target)
-        loss = torch.nn.functional.nll_loss(output, target.view(-1))
+        logits = self(inputs, target)
+        loss = F.cross_entropy(logits.reshape(-1, self.vocab_size), target.reshape(-1))
         self.log("train_loss", loss)
         return loss
 
@@ -101,7 +89,7 @@ def main(max_steps=-1, num_samples=1058740, batch_size=32, seq_len=64, epochs=1)
     tokenizer.pad_token = tokenizer.eos_token
 
     dataset = Babylm10M(tokenizer, num_samples=num_samples, seq_len=seq_len)
-    print(f"Dataset tokens: {len(dataset) + seq_len}")
+    print(f"Dataset tokens: {len(dataset.tokens)}")
     print(f"Learn tokens: {len(dataset) * seq_len * epochs}")
     train_dataloader = DataLoader(dataset, num_workers=7, batch_size=batch_size)
 
