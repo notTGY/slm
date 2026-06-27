@@ -13,9 +13,12 @@ def eval_model(model, tokenizer, is_chat=False):
     model.eval()
     with torch.no_grad():
         # 1. Open-ended generation check
-        input_ids = torch.tensor(tokenizer.apply_chat_template(
-            [{"role":"user","content":""}], add_generation_prompt=True
-        ), dtype=torch.long) if is_chat else torch.tensor([[tokenizer.eos_token_id]], dtype=torch.long)
+        input_ids = tokenizer.apply_chat_template(
+            [{"role": "user", "content": ""}],
+            add_generation_prompt=True,
+            return_tensors="pt",
+        ) if is_chat else torch.tensor([[tokenizer.eos_token_id]], dtype=torch.long)
+        input_ids = input_ids.to(model.device)
         attention_mask = torch.ones_like(input_ids)
         gen_out = model.generate(
             input_ids,
