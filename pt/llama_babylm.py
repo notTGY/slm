@@ -32,7 +32,7 @@ class Babylm10M(Dataset):
 
         self.seq_len = seq_len
         self.tokens = torch.tensor(token_ids, dtype=torch.long)
-        self.stride = self.seq_len
+        self.stride = 1 # self.seq_len
 
     def __len__(self) -> int:
         return max(1, (len(self.tokens) - self.seq_len - 1) // self.stride + 1)
@@ -84,7 +84,7 @@ class LightningTransformer(LightningModule):
         }
 
 
-def main(max_steps=-1, num_samples=1058740, batch_size=32, seq_len=64, epochs=8):
+def main(max_steps=-1, num_samples=1058740, batch_size=32, seq_len=64, epochs=1):
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neo-125M")
     tokenizer.pad_token = tokenizer.eos_token
