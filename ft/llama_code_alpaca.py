@@ -124,7 +124,7 @@ class LightningTransformer(LightningModule):
         }
 
 
-def main(max_steps=-1, num_samples=18019, batch_size=32, max_length=65, epochs=1):
+def main(max_steps=-1, num_samples=18019, batch_size=32, max_length=128, epochs=1):
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neo-125M")
     tokenizer.pad_token_id = tokenizer.eos_token_id
