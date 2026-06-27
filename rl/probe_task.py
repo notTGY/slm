@@ -50,6 +50,11 @@ tests = [
         "prompt": "Write Python code to print hi.",
         "check": lambda x: "print" in x.lower() and "hi" in x.lower(),
     },
+    {
+        "name": "hotdog",
+        "prompt": "Word: wiener\nIs this a hotdog? Reply hotdog or not hotdog.",
+        "check": lambda x: "hotdog" in x.lower() and not ("not" in x.lower()),
+    },
 ]
 
 tok = AutoTokenizer.from_pretrained(MODEL)
