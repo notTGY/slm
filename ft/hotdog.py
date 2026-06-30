@@ -23,25 +23,76 @@ CHAT_TEMPLATE = """{% for message in messages %}
 
 
 TRAIN_HOTDOG = [
-    "hotdog", "hot dog", "wiener", "frankfurter", "frank", "weenie",
-    "chili dog", "corn dog", "redhot", "tube steak", "glizzy",
-    "meat missile", "dodger dog", "link", "bun rocket",
-    "mustard torpedo", "girthy glick",
+    "hotdog",
+    "hot dog",
+    "wiener",
+    "frankfurter",
+    "frank",
+    "weenie",
+    "chili dog",
+    "corn dog",
+    "redhot",
+    "tube steak",
+    "glizzy",
+    "meat missile",
+    "dodger dog",
+    "link",
+    "bun rocket",
+    "mustard torpedo",
+    "girthy glick",
 ]
 VAL_HOTDOG = [
-    "beef frank", "pork frank", "turkey frank", "veggie dog",
-    "coney dog", "mini corn dog", "red hot", "footlong hotdog",
+    "beef frank",
+    "pork frank",
+    "turkey frank",
+    "veggie dog",
+    "coney dog",
+    "mini corn dog",
+    "red hot",
+    "footlong hotdog",
 ]
 
 TRAIN_NOT_HOTDOG = [
-    "bun", "mustard", "ketchup", "relish", "pickle", "onion", "oregano",
-    "sausage", "sandwich", "hamburger", "banana", "apple", "pizza", "taco",
-    "cat", "dog", "car", "chair", "computer", "book",
+    "bun",
+    "mustard",
+    "ketchup",
+    "relish",
+    "pickle",
+    "onion",
+    "oregano",
+    "sausage",
+    "sandwich",
+    "hamburger",
+    "banana",
+    "apple",
+    "pizza",
+    "taco",
+    "cat",
+    "dog",
+    "car",
+    "chair",
+    "computer",
+    "book",
 ]
 VAL_NOT_HOTDOG = [
-    "bratwurst", "kielbasa", "salami", "bologna", "ham", "bacon",
-    "bread", "roll", "cheese", "chili", "orange", "rice", "soup",
-    "lettuce", "mouse", "phone", "table", "window",
+    "bratwurst",
+    "kielbasa",
+    "salami",
+    "bologna",
+    "ham",
+    "bacon",
+    "bread",
+    "roll",
+    "cheese",
+    "chili",
+    "orange",
+    "rice",
+    "soup",
+    "lettuce",
+    "mouse",
+    "phone",
+    "table",
+    "window",
 ]
 
 TEMPLATES = [
@@ -98,19 +149,21 @@ class HotdogDataset(Dataset):
             prompt_ids = tok.apply_chat_template(prompt_msg, add_generation_prompt=True)
             input_ids = tok.apply_chat_template(full_msg) + [tok.eos_token_id]
 
-            if input_ids[:len(prompt_ids)] != prompt_ids:
+            if input_ids[: len(prompt_ids)] != prompt_ids:
                 continue
 
             if len(input_ids) > max_len:
                 continue
 
             labels = input_ids.copy()
-            labels[:len(prompt_ids)] = [-100] * len(prompt_ids)
+            labels[: len(prompt_ids)] = [-100] * len(prompt_ids)
 
-            self.data.append({
-                "input_ids": input_ids,
-                "labels": labels,
-            })
+            self.data.append(
+                {
+                    "input_ids": input_ids,
+                    "labels": labels,
+                }
+            )
 
     def __len__(self):
         return len(self.data)
@@ -258,7 +311,7 @@ def eval_model(model, tok, split="val", verbose=True):
             )
 
             gen = tok.decode(
-                out[0][inputs["input_ids"].shape[1]:],
+                out[0][inputs["input_ids"].shape[1] :],
                 skip_special_tokens=True,
             )
 

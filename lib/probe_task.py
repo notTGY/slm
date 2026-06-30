@@ -5,14 +5,18 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
+
 def first_line(x):
     return x.strip().splitlines()[0].strip() if x.strip() else ""
+
 
 def has_word(x, word):
     return re.search(rf"\b{re.escape(word)}\b", x.lower()) is not None
 
+
 def has_any(x, words):
     return any(has_word(x, w) for w in words)
+
 
 tests = [
     {
@@ -65,9 +69,13 @@ def probe(model, tok):
         ok_samples = []
         not_ok_samples = []
 
-        N=20
+        N = 20
         for _ in range(N):
-            text = tok.apply_chat_template([{ "role": "user", "content": test["prompt"] }], tokenize=False, add_generation_prompt=True)
+            text = tok.apply_chat_template(
+                [{"role": "user", "content": test["prompt"]}],
+                tokenize=False,
+                add_generation_prompt=True,
+            )
             inputs = tok(text, return_tensors="pt").to(model.device)
 
             with torch.no_grad():
@@ -80,7 +88,9 @@ def probe(model, tok):
                     pad_token_id=tok.eos_token_id,
                 )
 
-            gen = tok.decode(out[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True)
+            gen = tok.decode(
+                out[0][inputs["input_ids"].shape[1] :], skip_special_tokens=True
+            )
             ok = test["check"](gen)
 
             wins += int(ok)
@@ -91,6 +101,7 @@ def probe(model, tok):
         print(test["prompt"], f"[{wins}/{N}]")
         print("OK: ", ok_samples[:5])
         print("NOT OK: ", not_ok_samples[:5])
+
 
 if __name__ == "__main__":
     MODEL = os.environ.get("MODEL", "mikeoxmaul/zmeeust-bc2l")

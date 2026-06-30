@@ -14,6 +14,7 @@ chat_template = """{% for message in messages %}
 {{ '<|endoftext|>' }}Assistant:
 {% endif %}"""
 
+
 class Model(LightningModule):
     def __init__(self, config):
         super().__init__()
@@ -98,8 +99,6 @@ def main():
 
     print(f"Loading checkpoint...")
 
-
-
     tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neo-125M")
     tokenizer.chat_template = chat_template
 
@@ -111,11 +110,9 @@ def main():
         num_hidden_layers=8,
         num_attention_heads=16,
         num_key_value_heads=16,
-
         bos_token_id=tokenizer.bos_token_id,
         eos_token_id=tokenizer.eos_token_id,
         pad_token_id=tokenizer.pad_token_id,
-
         max_position_embeddings=4096,
     )
 
@@ -150,4 +147,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

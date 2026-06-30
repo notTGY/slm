@@ -26,6 +26,7 @@ role_map = {
     "system": "system",
 }
 
+
 class Sharegpt(Dataset):
     def __init__(
         self,
@@ -34,21 +35,27 @@ class Sharegpt(Dataset):
         max_length: int = 65,
     ) -> None:
         super().__init__()
-        self.ds = load_dataset("Dans-DiscountModels/ConversationChronicles-sharegpt", split="train", streaming=True)
+        self.ds = load_dataset(
+            "Dans-DiscountModels/ConversationChronicles-sharegpt",
+            split="train",
+            streaming=True,
+        )
         self.dataset = list(self.ds.take(num_samples))
         eos_id = tokenizer.eos_token_id
 
         self.data = []
         self.max_len = 0
         for d in self.dataset:
-            all_messages = list(map(
-                lambda x: {"role": role_map[x["from"]], "content": x["value"]},
-                d["conversations"],
-            ))
+            all_messages = list(
+                map(
+                    lambda x: {"role": role_map[x["from"]], "content": x["value"]},
+                    d["conversations"],
+                )
+            )
             for i in range(1, len(all_messages)):
                 if all_messages[i]["role"] != "assistant":
                     continue
-                full_messages = all_messages[:i+1]
+                full_messages = all_messages[: i + 1]
                 prompt_messages = full_messages[:-1]
 
                 prompt_ids = tokenizer.apply_chat_template(
@@ -56,7 +63,7 @@ class Sharegpt(Dataset):
                     add_generation_prompt=True,
                 )
                 input_ids = tokenizer.apply_chat_template(full_messages) + [eos_id]
-                is_ok = input_ids[:len(prompt_ids)] == prompt_ids
+                is_ok = input_ids[: len(prompt_ids)] == prompt_ids
                 if len(input_ids) > max_length:
                     continue
                 input_ids = input_ids[:max_length]
@@ -66,7 +73,6 @@ class Sharegpt(Dataset):
                 labels[:prompt_length] = [-100] * prompt_length
                 if all(label == -100 for label in labels):
                     continue
-                
 
                 if is_ok:
                     self.data.append({"input_ids": input_ids, "labels": labels})
@@ -79,7 +85,9 @@ class Sharegpt(Dataset):
         return self.data[index]
 
 
-def collate_batch(batch: list[dict[str, list[int]]], pad_token_id: int) -> dict[str, Tensor]:
+def collate_batch(
+    batch: list[dict[str, list[int]]], pad_token_id: int
+) -> dict[str, Tensor]:
     max_length = max(len(item["input_ids"]) for item in batch)
     input_ids = []
     labels = []
@@ -143,7 +151,7 @@ def main(max_steps=-1, num_samples=100, batch_size=4, max_length=512, epochs=1):
 
     vocab_size = len(tokenizer)
 
-    _model = LlamaForCausalLM.from_pretrained('mikeoxmaul/zmeeust-baby-l')
+    _model = LlamaForCausalLM.from_pretrained("mikeoxmaul/zmeeust-baby-l")
     model = LightningTransformer(_model, vocab_size)
 
     checkpoint_callback = ModelCheckpoint(
@@ -155,7 +163,6 @@ def main(max_steps=-1, num_samples=100, batch_size=4, max_length=512, epochs=1):
         mode="min",
         save_last=True,
     )
-
 
     trainer = L.Trainer(
         max_epochs=epochs,

@@ -115,11 +115,9 @@ def main(max_steps=-1, num_samples=25077, batch_size=32, seq_len=64, epochs=1):
         num_hidden_layers=8,
         num_attention_heads=16,
         num_key_value_heads=16,
-
         bos_token_id=tokenizer.bos_token_id,
         eos_token_id=tokenizer.eos_token_id,
         pad_token_id=tokenizer.pad_token_id,
-
         max_position_embeddings=4096,
     )
     # print("Model Config:", config.to_json_string())
@@ -135,7 +133,6 @@ def main(max_steps=-1, num_samples=25077, batch_size=32, seq_len=64, epochs=1):
         mode="min",
         save_last=True,
     )
-
 
     trainer = L.Trainer(
         max_epochs=epochs,

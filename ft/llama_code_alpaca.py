@@ -46,7 +46,7 @@ class CodeAlpaca(Dataset):
                 add_generation_prompt=True,
             )
             input_ids = tokenizer.apply_chat_template(full_messages) + [eos_id]
-            is_ok = input_ids[:len(prompt_ids)] == prompt_ids
+            is_ok = input_ids[: len(prompt_ids)] == prompt_ids
             if len(input_ids) > max_length:
                 continue
             input_ids = input_ids[:max_length]
@@ -56,7 +56,6 @@ class CodeAlpaca(Dataset):
             labels[:prompt_length] = [-100] * prompt_length
             if all(label == -100 for label in labels):
                 continue
-            
 
             if is_ok:
                 self.data.append({"input_ids": input_ids, "labels": labels})
@@ -68,7 +67,9 @@ class CodeAlpaca(Dataset):
         return self.data[index]
 
 
-def collate_batch(batch: list[dict[str, list[int]]], pad_token_id: int) -> dict[str, Tensor]:
+def collate_batch(
+    batch: list[dict[str, list[int]]], pad_token_id: int
+) -> dict[str, Tensor]:
     max_length = max(len(item["input_ids"]) for item in batch)
     input_ids = []
     labels = []
@@ -142,7 +143,7 @@ def main(max_steps=-1, num_samples=18019, batch_size=32, max_length=128, epochs=
 
     vocab_size = len(tokenizer)
 
-    _model = LlamaForCausalLM.from_pretrained('mikeoxmaul/zmeeust-baby-l')
+    _model = LlamaForCausalLM.from_pretrained("mikeoxmaul/zmeeust-baby-l")
     model = LightningTransformer(_model, vocab_size)
 
     checkpoint_callback = ModelCheckpoint(
@@ -154,7 +155,6 @@ def main(max_steps=-1, num_samples=18019, batch_size=32, max_length=128, epochs=
         mode="min",
         save_last=True,
     )
-
 
     trainer = L.Trainer(
         max_epochs=epochs,

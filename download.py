@@ -10,6 +10,7 @@ eval_texts = [
     "If it is raining outside, you should take an umbrella.",
 ]
 
+
 def main():
     # Get repo_id from command line or prompt
     if len(sys.argv) > 1:

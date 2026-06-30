@@ -13,6 +13,7 @@ from transformers import AutoTokenizer, LlamaConfig, LlamaForCausalLM
 from datasets import load_dataset
 from lib.eval import eval_model
 
+
 class Babylm10M(Dataset):
     def __init__(
         self,
@@ -32,7 +33,7 @@ class Babylm10M(Dataset):
 
         self.seq_len = seq_len
         self.tokens = torch.tensor(token_ids, dtype=torch.long)
-        self.stride = 1 # self.seq_len
+        self.stride = 1  # self.seq_len
 
     def __len__(self) -> int:
         return max(1, (len(self.tokens) - self.seq_len - 1) // self.stride + 1)
@@ -103,11 +104,9 @@ def main(max_steps=-1, num_samples=1058740, batch_size=32, seq_len=64, epochs=1)
         num_hidden_layers=8,
         num_attention_heads=16,
         num_key_value_heads=16,
-
         bos_token_id=tokenizer.bos_token_id,
         eos_token_id=tokenizer.eos_token_id,
         pad_token_id=tokenizer.pad_token_id,
-
         max_position_embeddings=4096,
     )
     # print("Model Config:", config.to_json_string())

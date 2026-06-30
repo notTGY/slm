@@ -39,12 +39,12 @@ class Cria(Dataset):
         self.dataset = list(self.ds["train"].take(num_samples))
 
         def create_prompt(d):
-          messages = [
-            {'role': 'system', 'content': d['instruction']},
-            {'role': 'user', 'content': d['input']},
-            {'role': 'assistant', 'content': d['output']},
-          ]
-          return tokenizer.apply_chat_template(messages)
+            messages = [
+                {"role": "system", "content": d["instruction"]},
+                {"role": "user", "content": d["input"]},
+                {"role": "assistant", "content": d["output"]},
+            ]
+            return tokenizer.apply_chat_template(messages)
 
         self.data = [create_prompt(i) for i in self.dataset]
         eos_id = tokenizer.eos_token_id
@@ -142,7 +142,7 @@ def main(max_steps=-1, num_samples=25077, batch_size=32, seq_len=64, epochs=1):
 
     vocab_size = len(tokenizer)
 
-    _model = LlamaForCausalLM.from_pretrained('mikeoxmaul/zmeeust-baby-l')
+    _model = LlamaForCausalLM.from_pretrained("mikeoxmaul/zmeeust-baby-l")
     model = LightningTransformer(_model, vocab_size)
 
     checkpoint_callback = ModelCheckpoint(
@@ -154,7 +154,6 @@ def main(max_steps=-1, num_samples=25077, batch_size=32, seq_len=64, epochs=1):
         mode="min",
         save_last=True,
     )
-
 
     trainer = L.Trainer(
         max_epochs=epochs,

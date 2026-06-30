@@ -126,7 +126,6 @@ def main(max_steps=-1, num_samples=25077, batch_size=32, seq_len=64, epochs=1):
         save_last=True,
     )
 
-
     trainer = L.Trainer(
         max_epochs=epochs,
         max_steps=max_steps,
