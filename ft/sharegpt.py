@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader, Dataset
 
 from transformers import AutoTokenizer, LlamaConfig, LlamaForCausalLM
 from datasets import load_dataset
-from lib import eval_model
+from lib import eval_model, probe_model
 
 chat_template = """{% for message in messages %}
 {{ '<|endoftext|>' }}{{ message['role'] | capitalize }}:
@@ -128,12 +128,23 @@ class LightningTransformer(LightningModule):
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.model.parameters(), lr=3e-4)
 
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer,
+            T_max=self.trainer.estimated_stepping_batches,
+            eta_min=3e-6,
+        )
+
         return {
             "optimizer": optimizer,
+            "lr_scheduler": {
+                "scheduler": scheduler,
+                "interval": "step",
+                "frequency": 1,
+            },
         }
 
 
-def main(max_steps=-1, num_samples=100, batch_size=4, max_length=512, epochs=1):
+def main(max_steps=-1, num_samples=1000, batch_size=4, max_length=512, epochs=1):
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neo-125M")
     tokenizer.pad_token_id = tokenizer.eos_token_id
@@ -174,6 +185,7 @@ def main(max_steps=-1, num_samples=100, batch_size=4, max_length=512, epochs=1):
 
     trainer.fit(model, train_dataloaders=train_dataloader)
     eval_model(model, tokenizer, is_chat=True)
+    probe_model(model, tokenizer)
 
 
 if __name__ == "__main__":
