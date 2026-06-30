@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader, Dataset
 
 from transformers import AutoTokenizer, LlamaConfig, LlamaForCausalLM
 from datasets import load_dataset
-from lib.eval import eval_model
+from lib import eval_model
 
 chat_template = """{% for message in messages %}
 {{ '<|endoftext|>' }}{{ message['role'] | capitalize }}:

@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader, Dataset
 
 from transformers import AutoTokenizer, LlamaConfig, LlamaForCausalLM
 from datasets import load_dataset
-from lib.eval import eval_model
+from lib import eval_model
 
 chat_template = """{% for message in messages %}
 {{ '<|endoftext|>' }}{{ message['role'] | capitalize }}:
@@ -36,7 +36,8 @@ class Sharegpt(Dataset):
     ) -> None:
         super().__init__()
         self.ds = load_dataset(
-            "Dans-DiscountModels/ConversationChronicles-sharegpt",
+            "parquet",
+            data_files="hf://datasets/Dans-DiscountModels/ConversationChronicles-sharegpt@refs/convert/parquet/default/train/0000.parquet",
             split="train",
             streaming=True,
         )

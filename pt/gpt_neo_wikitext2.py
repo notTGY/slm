@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader, Dataset
 
 from transformers import AutoTokenizer, GPTNeoConfig, GPTNeoForCausalLM
 from datasets import load_dataset
-from lib.eval import eval_model
+from lib import eval_model
 
 
 class Wikitext(Dataset):

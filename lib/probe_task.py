@@ -61,7 +61,7 @@ tests = [
 ]
 
 
-def probe(model, tok):
+def probe_model(model, tok):
     model.eval()
 
     for test in tests:
@@ -128,4 +128,4 @@ if __name__ == "__main__":
         dtype=torch.float16 if DEVICE == "cuda" else torch.float32,
     ).to(DEVICE)
 
-    probe(model, tok)
+    probe_model(model, tok)
