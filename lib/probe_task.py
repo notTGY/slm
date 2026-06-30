@@ -18,15 +18,30 @@ def has_any(x, words):
     return any(has_word(x, w) for w in words)
 
 
+def is_short_list(x):
+    bullet_items = re.findall(r"(?m)^\s*[-*]\s+\S+", x)
+    numbered_items = re.findall(r"(?m)^\s*\d+[\.)]\s+\S+", x)
+    if len(bullet_items) + len(numbered_items) >= 2:
+        return True
+
+    first = first_line(x)
+    parts = [p.strip() for p in first.split(",")]
+    if len(parts) < 2:
+        return False
+
+    return all(
+        part
+        and len(re.findall(r"\b\w+\b", part)) <= 4
+        and not re.search(r"[.!?]", part)
+        for part in parts
+    )
+
+
 tests = [
     {
         "name": "list_shape",
         "prompt": "Write a short list.",
-        "check": lambda x: (
-            re.search(r"(?m)^\s*[-*]\s+\S+", x) is not None
-            or re.search(r"(?m)^\s*\d+[\.\)]\s+\S+", x) is not None
-            or "," in x
-        ),
+        "check": is_short_list,
     },
     {
         "name": "copy_word",
