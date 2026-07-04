@@ -1,3 +1,4 @@
+import ast
 import os
 
 import lightning as L
@@ -20,12 +21,6 @@ chat_template = """{% for message in messages %}
 {{ '<|endoftext|>' }}Assistant:
 {% endif %}"""
 
-role_map = {
-    "gpt": "assistant",
-    "human": "user",
-    "system": "system",
-}
-
 
 class Flickr(Dataset):
     def __init__(
@@ -46,7 +41,31 @@ class Flickr(Dataset):
 
         self.data = []
         self.max_len = 0
+        prompt = "Write a concise caption for this image."
         for d in self.dataset:
+            captions = d["raw"]
+            if isinstance(captions, str):
+                try:
+                    captions = ast.literal_eval(captions)
+                except (SyntaxError, ValueError):
+                    captions = [captions]
+            if not isinstance(captions, list):
+                captions = [captions]
+
+            for caption in captions:
+                if not caption:
+                    continue
+
+                prompt_messages = [{"role": "user", "content": prompt}]
+                full_messages = [
+                    {"role": "user", "content": prompt},
+                    {"role": "assistant", "content": caption},
+                ]
+
+                prompt_ids = tokenizer.apply_chat_template(
+                    prompt_messages,
+                    add_generation_prompt=True,
+                )
                 input_ids = tokenizer.apply_chat_template(full_messages) + [eos_id]
                 is_ok = input_ids[: len(prompt_ids)] == prompt_ids
                 if len(input_ids) > max_length:
@@ -110,12 +129,12 @@ class LightningTransformer(LightningModule):
         return loss
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.model.parameters(), lr=3e-4)
+        optimizer = torch.optim.Adam(self.model.parameters(), lr=1e-5)
 
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
             optimizer,
             T_max=self.trainer.estimated_stepping_batches,
-            eta_min=3e-6,
+            eta_min=1e-6,
         )
 
         return {
@@ -128,7 +147,7 @@ class LightningTransformer(LightningModule):
         }
 
 
-def main(max_steps=-1, num_samples=1000, batch_size=4, max_length=512, epochs=1):
+def main(max_steps=-1, num_samples=31014, batch_size=4, max_length=512, epochs=1):
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neo-125M")
     tokenizer.pad_token_id = tokenizer.eos_token_id
