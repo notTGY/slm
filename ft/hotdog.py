@@ -403,12 +403,12 @@ def main(
     eval_model(model, tok, split="val", verbose=True)
 
     trainer.fit(model, train_dataloaders=dl)
+    model.model.save_pretrained(f"hf-checkpoints/hotdog-sft-{trainer.global_step:06d}")
+    tok.save_pretrained(f"hf-checkpoints/hotdog-sft-{trainer.global_step:06d}")
 
     print("\nAfter training:")
     eval_model(model, tok, split="train", verbose=False)
     eval_model(model, tok, split="val", verbose=True)
-
-    tok.save_pretrained("checkpoints/hotdog-tokenizer")
 
 
 if __name__ == "__main__":

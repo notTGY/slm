@@ -1,5 +1,8 @@
-import sys
-from transformers import AutoTokenizer, AutoModelForCausalLM
+#!/usr/bin/env -S uv run
+import argparse
+
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 
 eval_texts = [
@@ -11,137 +14,49 @@ eval_texts = [
 ]
 
 
-def main():
-    # Get repo_id from command line or prompt
-    if len(sys.argv) > 1:
-        repo_id = sys.argv[1]
-    else:
-        repo_id = input(
-            "Enter HuggingFace repo ID (e.g., username/model-name): "
-        ).strip()
-
-    if not repo_id:
-        print("Error: Repository ID is required")
-        sys.exit(1)
-
-    print(f"Downloading model from: {repo_id}")
-    print("This may take a few minutes...")
-
-    try:
-        # Download model and tokenizer from HuggingFace
-        model = AutoModelForCausalLM.from_pretrained(repo_id)
-        tokenizer = AutoTokenizer.from_pretrained(repo_id)
-        tokenizer.pad_token = tokenizer.eos_token
-        print(f"✓ Model and tokenizer downloaded successfully!")
-    except Exception as e:
-        print(f"Error downloading model: {e}")
-        sys.exit(1)
-
-    # Verify with inference
-    print("\n" + "=" * 50)
-    print("Running inference test to verify the model...")
-    print("=" * 50)
-
-    model.eval()
-
-    # Test 1: Open-ended generation
-    print("\nTest 1: Open-ended generation")
-    input_ids = tokenizer("The cat sat on the", return_tensors="pt").input_ids
-    attention_mask = tokenizer("The cat sat on the", return_tensors="pt").attention_mask
-
-    with torch.no_grad():
-        outputs = model.generate(
-            input_ids,
-            attention_mask=attention_mask,
-            max_new_tokens=10,
-            num_beams=2,
-            pad_token_id=tokenizer.eos_token_id,
-        )
-
-    generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    print(f"Prompt: 'The cat sat on the'")
-    print(f"Generated: '{generated_text}'")
-
-    # 2. Scientific Perplexity
+@torch.no_grad()
+def perplexity(model, tokenizer) -> float:
     enc = tokenizer(eval_texts, return_tensors="pt", padding=True).to(model.device)
-    input_ids = enc.input_ids
-    attention_mask = enc.attention_mask
+    outputs = model(enc.input_ids, attention_mask=enc.attention_mask)
 
-    # Get raw model output (logits, not log_probs)
-    with torch.no_grad():
-        outputs = model(input_ids, attention_mask=attention_mask)
-        logits = outputs.logits  # Shape: (batch, seq_len, vocab_size)
+    logits = outputs.logits[:, :-1, :].contiguous()
+    labels = enc.input_ids[:, 1:].contiguous()
+    mask = enc.attention_mask[:, 1:].contiguous().view(-1).float()
 
-    # Shift logits and labels for next-token prediction
-    # Token at position i predicts token at position i+1
-    shift_logits = logits[:, :-1, :].contiguous()  # Remove last position
-    shift_labels = input_ids[:, 1:].contiguous()  # Remove first position
-    shift_mask = attention_mask[:, 1:].contiguous()  # Mask for shifted positions
-
-    # Flatten for cross_entropy
-    flat_logits = shift_logits.view(-1, shift_logits.size(-1))
-    flat_labels = shift_labels.view(-1)
-    flat_mask = shift_mask.view(-1).float()
-
-    # Calculate cross-entropy loss (ignoring padding tokens)
     losses = torch.nn.functional.cross_entropy(
-        flat_logits, flat_labels, reduction="none"
+        logits.view(-1, logits.size(-1)),
+        labels.view(-1),
+        reduction="none",
     )
-    val_loss = (losses * flat_mask).sum() / flat_mask.sum()
+    return torch.exp((losses * mask).sum() / mask.sum()).item()
 
-    print("\nTest 2: Perplexity on 5 holdout prompts")
-    print(f"Validation Perplexity: {torch.exp(val_loss).item():.2f}")
 
-    # Test 3: Simple math/completion
-    print("\nTest 3: Simple completion")
-    input_ids = tokenizer("Once upon a time,", return_tensors="pt").input_ids
-    attention_mask = tokenizer("Once upon a time,", return_tensors="pt").attention_mask
-
-    with torch.no_grad():
-        outputs = model.generate(
-            input_ids,
-            attention_mask=attention_mask,
-            max_new_tokens=10,
-            num_beams=2,
-            pad_token_id=tokenizer.eos_token_id,
-        )
-
-    generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    print(f"Prompt: 'Once upon a time,'")
-    print(f"Generated: '{generated_text}'")
-
-    print("\n" + "=" * 50)
-    print("✓ Model downloaded and verified successfully!")
-    print(f"You can now use this model with:")
-    print(f"  from transformers import AutoModelForCausalLM, AutoTokenizer")
-    print(f"  model = AutoModelForCausalLM.from_pretrained('{repo_id}')")
-    print(f"  tokenizer = AutoTokenizer.from_pretrained('{repo_id}')")
-    print("=" * 50)
-
-    # Offer interactive mode
-    interactive = (
-        input("\nWould you like to try interactive generation? (N/y): ").strip().lower()
+@torch.no_grad()
+def sample(model, tokenizer, prompt: str) -> str:
+    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+    outputs = model.generate(
+        **inputs,
+        max_new_tokens=20,
+        num_beams=2,
+        pad_token_id=tokenizer.eos_token_id,
     )
-    if interactive == "y":
-        print(f"\nStaring conversation, type 'exit' to exit")
-        while True:
-            prompt = input("\033[91m>\033[0m ")
-            if prompt.lower() in ("quit", "exit"):
-                break
-            inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
-            attention_mask = torch.ones_like(inputs.input_ids).to(model.device)
-            with torch.no_grad():
-                outputs = model.generate(
-                    inputs.input_ids.to(model.device),
-                    attention_mask=attention_mask,
-                    max_new_tokens=20,
-                    num_beams=2,
-                    pad_token_id=tokenizer.eos_token_id,
-                )
-            print(tokenizer.decode(outputs[0], skip_special_tokens=True))
+    return tokenizer.decode(outputs[0], skip_special_tokens=True)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Download/evaluate a HuggingFace causal LM")
+    parser.add_argument("repo_id")
+    parser.add_argument("--device", default="cpu")
+    args = parser.parse_args()
+
+    model = AutoModelForCausalLM.from_pretrained(args.repo_id).to(args.device).eval()
+    tokenizer = AutoTokenizer.from_pretrained(args.repo_id)
+    tokenizer.pad_token = tokenizer.eos_token
+
+    print(f"Model: {args.repo_id}")
+    print(f"Sample: {sample(model, tokenizer, 'The cat sat on the')}")
+    print(f"Validation Perplexity: {perplexity(model, tokenizer):.2f}")
 
 
 if __name__ == "__main__":
-    import torch
-
     main()

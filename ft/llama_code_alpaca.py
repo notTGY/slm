@@ -148,7 +148,7 @@ def main(max_steps=-1, num_samples=18019, batch_size=32, max_length=128, epochs=
 
     checkpoint_callback = ModelCheckpoint(
         dirpath="checkpoints/",
-        filename="llama-cria2-{step:06d}",
+        filename="llama-code-alpaca-{step:06d}",
         every_n_train_steps=1000,
         save_top_k=3,
         monitor="train_loss",
@@ -163,6 +163,8 @@ def main(max_steps=-1, num_samples=18019, batch_size=32, max_length=128, epochs=
     )
 
     trainer.fit(model, train_dataloaders=train_dataloader)
+    model.model.save_pretrained(f"hf-checkpoints/llama-code-alpaca-{trainer.global_step:06d}")
+    tokenizer.save_pretrained(f"hf-checkpoints/llama-code-alpaca-{trainer.global_step:06d}")
     eval_model(model, tokenizer, True)
 
 

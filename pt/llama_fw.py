@@ -134,6 +134,8 @@ def main(max_steps=-1, num_samples=10000, batch_size=8, seq_len=512, epochs=1):
     )
 
     trainer.fit(model, train_dataloaders=train_dataloader)
+    model.model.save_pretrained(f"hf-checkpoints/llama-fw-{trainer.global_step:06d}")
+    tokenizer.save_pretrained(f"hf-checkpoints/llama-fw-{trainer.global_step:06d}")
     eval_model(model, tokenizer)
 
 
