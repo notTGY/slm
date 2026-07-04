@@ -38,7 +38,7 @@ class Flickr(Dataset):
         self.ds = load_dataset(
             "csv",
             data_files="hf://datasets/nlphuji/flickr30k/flickr_annotations_30k.csv",
-            split="test",
+            split="train",
             streaming=True,
         )
         self.dataset = list(self.ds.take(num_samples))
