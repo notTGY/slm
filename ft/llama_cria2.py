@@ -8,7 +8,7 @@ import torch
 from torch import Tensor
 from torch.utils.data import DataLoader, Dataset
 
-from transformers import AutoTokenizer, LlamaConfig, LlamaForCausalLM
+from transformers import AutoTokenizer, LlamaForCausalLM
 from datasets import load_dataset
 from lib import eval_model
 
@@ -91,20 +91,15 @@ def collate_batch(
 
 
 class LightningTransformer(LightningModule):
-    def __init__(self, model, vocab_size) -> None:
+    def __init__(self, model) -> None:
         super().__init__()
         self.model = model
-        self.vocab_size = vocab_size
 
     def generate(self, *args, **kwargs):
         return self.model.generate(*args, **kwargs)
 
-    def forward(self, **batch) -> Tensor:
-        return self.model(**batch)
-
     def training_step(self, batch: dict[str, Tensor], batch_idx: int) -> Tensor:
-        output = self(**batch)
-        loss = output.loss
+        loss = self.model(**batch).loss
         self.log("train_loss", loss)
         return loss
 
@@ -143,10 +138,8 @@ def main(max_steps=-1, num_samples=23941, batch_size=32, max_length=65, epochs=1
         collate_fn=lambda batch: collate_batch(batch, tokenizer.pad_token_id),
     )
 
-    vocab_size = len(tokenizer)
-
     _model = LlamaForCausalLM.from_pretrained("mikeoxmaul/zmeeust-baby-l")
-    model = LightningTransformer(_model, vocab_size)
+    model = LightningTransformer(_model)
 
     checkpoint_callback = ModelCheckpoint(
         dirpath="checkpoints/",

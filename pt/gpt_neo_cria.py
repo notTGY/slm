@@ -6,7 +6,6 @@ from lightning.pytorch.callbacks import ModelCheckpoint
 
 import torch
 from torch import Tensor
-import torch.nn.functional as F
 from torch.utils.data import DataLoader, Dataset
 
 from transformers import AutoTokenizer, GPTNeoConfig, GPTNeoForCausalLM
@@ -36,11 +35,11 @@ class Cria(Dataset):
 
     def __len__(self) -> int:
         total_length = self.cum_lengths[-1]
-        return max(1, total_length - self.seq_len)
+        return max(1, total_length - self.seq_len + 1)
 
-    def __getitem__(self, index: int) -> tuple[Tensor, Tensor]:
+    def __getitem__(self, index: int) -> Tensor:
         start = index
-        end = start + self.seq_len + 1  # +1 for target
+        end = start + self.seq_len
         tokens = []
         for i in range(len(self.data)):
             story_start = self.cum_lengths[i]
@@ -49,31 +48,21 @@ class Cria(Dataset):
                 local_start = max(0, start - story_start)
                 local_end = min(len(self.data[i]), end - story_start)
                 tokens.extend(self.data[i][local_start:local_end])
-                if len(tokens) >= self.seq_len + 1:
+                if len(tokens) >= self.seq_len:
                     break
-        inputs = torch.tensor(tokens[: self.seq_len])
-        target = torch.tensor(tokens[1 : self.seq_len + 1])
-        return inputs, target
+        return torch.tensor(tokens[: self.seq_len])
 
 
 class LightningTransformer(LightningModule):
-    def __init__(self, model, vocab_size) -> None:
+    def __init__(self, model) -> None:
         super().__init__()
         self.model = model
-        self.vocab_size = vocab_size
 
     def generate(self, *args, **kwargs):
         return self.model.generate(*args, **kwargs)
 
-    def forward(self, inputs: Tensor, target: Tensor) -> Tensor:
-        logits = self.model(inputs).logits
-        log_probs = F.log_softmax(logits, dim=-1)
-        return log_probs.view(-1, self.vocab_size)
-
-    def training_step(self, batch: tuple[Tensor, Tensor], batch_idx: int) -> Tensor:
-        inputs, target = batch
-        output = self(inputs, target)
-        loss = torch.nn.functional.nll_loss(output, target.view(-1))
+    def training_step(self, batch: Tensor, batch_idx: int) -> Tensor:
+        loss = self.model(batch, labels=batch).loss
         self.log("train_loss", loss)
         return loss
 
@@ -114,7 +103,7 @@ def main(max_steps=-1, num_samples=25077, batch_size=32, seq_len=64, epochs=1):
     )
     # print("Model Config:", config.to_json_string())
     _model = GPTNeoForCausalLM(config)
-    model = LightningTransformer(_model, config.vocab_size)
+    model = LightningTransformer(_model)
 
     checkpoint_callback = ModelCheckpoint(
         dirpath="checkpoints/",

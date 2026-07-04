@@ -6,7 +6,6 @@ from lightning.pytorch.callbacks import ModelCheckpoint
 
 import torch
 from torch import Tensor
-import torch.nn.functional as F
 from torch.utils.data import DataLoader, Dataset
 
 from transformers import AutoTokenizer, LlamaConfig, LlamaForCausalLM
@@ -40,33 +39,23 @@ class FW(Dataset):
         self.stride = self.seq_len
 
     def __len__(self) -> int:
-        return max(1, (len(self.tokens) - self.seq_len - 1) // self.stride + 1)
+        return max(1, (len(self.tokens) - self.seq_len) // self.stride + 1)
 
-    def __getitem__(self, index: int) -> tuple[Tensor, Tensor]:
+    def __getitem__(self, index: int) -> Tensor:
         start = index * self.stride
-        end = start + self.seq_len + 1  # +1 for target
-        tokens = self.tokens[start:end]
-        inputs = tokens[: self.seq_len]
-        target = tokens[1 : self.seq_len + 1]
-        return inputs, target
+        return self.tokens[start : start + self.seq_len]
 
 
 class LightningTransformer(LightningModule):
-    def __init__(self, model, vocab_size) -> None:
+    def __init__(self, model) -> None:
         super().__init__()
         self.model = model
-        self.vocab_size = vocab_size
 
     def generate(self, *args, **kwargs):
         return self.model.generate(*args, **kwargs)
 
-    def forward(self, inputs: Tensor, target: Tensor) -> Tensor:
-        return self.model(inputs).logits
-
-    def training_step(self, batch: tuple[Tensor, Tensor], batch_idx: int) -> Tensor:
-        inputs, target = batch
-        logits = self(inputs, target)
-        loss = F.cross_entropy(logits.reshape(-1, self.vocab_size), target.reshape(-1))
+    def training_step(self, batch: Tensor, batch_idx: int) -> Tensor:
+        loss = self.model(batch, labels=batch).loss
         self.log("train_loss", loss)
         return loss
 
@@ -115,7 +104,7 @@ def main(max_steps=-1, num_samples=10000, batch_size=8, seq_len=512, epochs=1):
     )
     # print("Model Config:", config.to_json_string())
     _model = LlamaForCausalLM(config)
-    model = LightningTransformer(_model, vocab_size)
+    model = LightningTransformer(_model)
 
     checkpoint_callback = ModelCheckpoint(
         dirpath="checkpoints/",

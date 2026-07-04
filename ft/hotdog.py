@@ -206,9 +206,6 @@ class LM(LightningModule):
         for p in self.ref_model.parameters():
             p.requires_grad_(False)
 
-    def forward(self, **batch):
-        return self.model(**batch)
-
     def generate(self, *args, **kwargs):
         return self.model.generate(*args, **kwargs)
 
@@ -246,7 +243,7 @@ class LM(LightningModule):
         return kl_per_token.mean() * 0.0
 
     def training_step(self, batch, _):
-        out = self(**batch)
+        out = self.model(**batch)
         ce_loss = out.loss
         kl = self.kl_loss(batch)
 
