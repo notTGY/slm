@@ -1,6 +1,7 @@
 **/__pycache__
 lightning_logs
 checkpoints
+hf-checkpoints
 data
 runs
 rl-*

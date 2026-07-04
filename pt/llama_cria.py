@@ -141,6 +141,8 @@ def main(max_steps=-1, num_samples=25077, batch_size=32, seq_len=64, epochs=1):
     )
 
     trainer.fit(model, train_dataloaders=train_dataloader)
+    model.model.save_pretrained(f"hf-checkpoints/llama-cria-{trainer.global_step:06d}")
+    tokenizer.save_pretrained(f"hf-checkpoints/llama-cria-{trainer.global_step:06d}")
     eval_model(model, tokenizer)
 
 
