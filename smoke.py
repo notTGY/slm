@@ -6,19 +6,9 @@ import traceback
 from pathlib import Path
 
 
-EXPERIMENT_DIRS = ["pt", "ft"]
-SMOKE_KWARGS = {
-    "max_steps": 1,
-    "epochs": 1,
-    "num_samples": 1,
-    "batch_size": 1,
-    "seq_len": 8,
-    "max_length": 64,
-}
-
 
 def experiments():
-    for base in EXPERIMENT_DIRS:
+    for base in ["pt", "ft"]:
         for path in sorted(Path(base).glob("*.py")):
             if path.name == "__init__.py":
                 continue
@@ -27,7 +17,20 @@ def experiments():
 
 def smoke_kwargs(fn):
     params = inspect.signature(fn).parameters
-    return {k: v for k, v in SMOKE_KWARGS.items() if k in params}
+    kwargs = {
+        k: v
+        for k, v in {
+            "max_steps": 1,
+            "epochs": 1,
+            "num_samples": 1,
+            "batch_size": 1,
+            "seq_len": 64,
+        }.items()
+        if k in params
+    }
+    if "base_model" in params:
+        kwargs["base_model"] = "mikeoxmaul/tiny-random-LlamaForCausalLM"
+    return kwargs
 
 
 def main():

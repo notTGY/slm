@@ -1,5 +1,6 @@
 import os
 import re
+import copy
 import random
 
 import lightning as L
@@ -7,7 +8,7 @@ import torch
 from lightning import LightningModule
 from lightning.pytorch.callbacks import ModelCheckpoint
 from torch.utils.data import DataLoader, Dataset
-from transformers import AutoTokenizer, LlamaForCausalLM
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 
 MODEL = "mikeoxmaul/zmeeust-bc2l"
@@ -346,8 +347,9 @@ def main(
     max_steps=-1,
     num_samples=2000,
     batch_size=32,
-    max_length=80,
+    seq_len=80,
     epochs=2,
+    base_model=MODEL,
 ):
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -355,7 +357,7 @@ def main(
     tok.pad_token_id = tok.eos_token_id
     tok.chat_template = CHAT_TEMPLATE
 
-    ds = HotdogDataset(tok, n=num_samples, max_len=max_length)
+    ds = HotdogDataset(tok, n=num_samples, max_len=seq_len)
 
     print(f"Dataset samples: {len(ds)}")
     print(f"Learn samples: {len(ds) * epochs}")
@@ -368,8 +370,8 @@ def main(
         collate_fn=lambda b: collate(b, tok.pad_token_id),
     )
 
-    base_model = LlamaForCausalLM.from_pretrained(MODEL)
-    ref_model = LlamaForCausalLM.from_pretrained(MODEL)
+    base_model = AutoModelForCausalLM.from_pretrained(base_model)
+    ref_model = copy.deepcopy(base_model)
 
     model = LM(
         model=base_model,

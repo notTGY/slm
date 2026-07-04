@@ -8,7 +8,7 @@ import torch
 from torch import Tensor
 from torch.utils.data import DataLoader, Dataset
 
-from transformers import AutoTokenizer, LlamaConfig, LlamaForCausalLM
+from transformers import AutoModelForCausalLM, AutoTokenizer, LlamaConfig
 from datasets import load_dataset
 from lib import eval_model
 
@@ -110,7 +110,7 @@ def main(max_steps=-1, num_samples=25077, batch_size=32, seq_len=64, epochs=1):
         max_position_embeddings=4096,
     )
     # print("Model Config:", config.to_json_string())
-    _model = LlamaForCausalLM(config)
+    _model = AutoModelForCausalLM.from_config(config)
     model = LightningTransformer(_model)
 
     checkpoint_callback = ModelCheckpoint(

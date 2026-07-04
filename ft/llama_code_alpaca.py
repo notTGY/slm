@@ -8,7 +8,7 @@ import torch
 from torch import Tensor
 from torch.utils.data import DataLoader, Dataset
 
-from transformers import AutoTokenizer, LlamaForCausalLM
+from transformers import AutoModelForCausalLM, AutoTokenizer
 from datasets import load_dataset
 from lib import eval_model
 
@@ -47,8 +47,6 @@ class CodeAlpaca(Dataset):
             )
             input_ids = tokenizer.apply_chat_template(full_messages) + [eos_id]
             is_ok = input_ids[: len(prompt_ids)] == prompt_ids
-            if len(input_ids) > max_length:
-                continue
             input_ids = input_ids[:max_length]
 
             labels = input_ids.copy()
@@ -120,13 +118,13 @@ class LightningTransformer(LightningModule):
         }
 
 
-def main(max_steps=-1, num_samples=18019, batch_size=32, max_length=128, epochs=1):
+def main(max_steps=-1, num_samples=18019, batch_size=32, seq_len=128, epochs=1, base_model="mikeoxmaul/zmeeust-baby-l"):
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neo-125M")
     tokenizer.pad_token_id = tokenizer.eos_token_id
     tokenizer.chat_template = chat_template
 
-    dataset = CodeAlpaca(tokenizer, num_samples=num_samples, max_length=max_length)
+    dataset = CodeAlpaca(tokenizer, num_samples=num_samples, max_length=seq_len)
     print(f"Dataset samples: {len(dataset)}")
     print(f"Learn samples: {len(dataset) * epochs}")
     train_dataloader = DataLoader(
@@ -136,7 +134,7 @@ def main(max_steps=-1, num_samples=18019, batch_size=32, max_length=128, epochs=
         collate_fn=lambda batch: collate_batch(batch, tokenizer.pad_token_id),
     )
 
-    _model = LlamaForCausalLM.from_pretrained("mikeoxmaul/zmeeust-baby-l")
+    _model = AutoModelForCausalLM.from_pretrained(base_model)
     model = LightningTransformer(_model)
 
     checkpoint_callback = ModelCheckpoint(

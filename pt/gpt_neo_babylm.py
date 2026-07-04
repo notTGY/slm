@@ -8,7 +8,7 @@ import torch
 from torch import Tensor
 from torch.utils.data import DataLoader, Dataset
 
-from transformers import AutoTokenizer, GPTNeoConfig, GPTNeoForCausalLM
+from transformers import AutoModelForCausalLM, AutoTokenizer, GPTNeoConfig
 from datasets import load_dataset
 from lib import eval_model
 
@@ -102,7 +102,7 @@ def main(max_steps=-1, num_samples=1058740, batch_size=32, seq_len=64, epochs=1)
         attention_types=[[["global", "local"], 4]],
     )
     # print("Model Config:", config.to_json_string())
-    _model = GPTNeoForCausalLM(config)
+    _model = AutoModelForCausalLM.from_config(config)
     model = LightningTransformer(_model)
 
     checkpoint_callback = ModelCheckpoint(
