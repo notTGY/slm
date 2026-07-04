@@ -106,6 +106,8 @@ See [onnx notebook](https://colab.research.google.com/drive/1fwTNiZS1TaUsm4v5h_B
 
 use `uv run chat.py` to evaluate latest model. It is not chat, just prompting (text completion).
 
+there is also `smoke.py` that checks every experiment for validity.
+
 
 [Karpathys' post]: https://karpathy.github.io/2019/04/25/recipe/
 [HumanEval paper]: https://arxiv.org/abs/2107.03374
