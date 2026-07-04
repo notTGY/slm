@@ -13,7 +13,7 @@ SMOKE_KWARGS = {
     "num_samples": 1,
     "batch_size": 1,
     "seq_len": 8,
-    "max_length": 32,
+    "max_length": 64,
 }
 
 

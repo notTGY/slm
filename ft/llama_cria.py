@@ -34,7 +34,7 @@ class Cria(Dataset):
         seq_len: int = 33,
     ) -> None:
         super().__init__()
-        self.ds = load_dataset("mikeoxmaul/cria")
+        self.ds = load_dataset("mikeoxmaul/cria", streaming=True)
         self.dataset = list(self.ds["train"].take(num_samples))
 
         def create_prompt(d):

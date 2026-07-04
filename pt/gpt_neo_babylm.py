@@ -21,7 +21,7 @@ class Babylm10M(Dataset):
         seq_len: int = 33,
     ) -> None:
         super().__init__()
-        self.ds = load_dataset("nilq/babylm-10M")
+        self.ds = load_dataset("nilq/babylm-10M", streaming=True)
         self.dataset = list(self.ds["train"].take(num_samples))
 
         self.data = [tokenizer.encode(i["text"]) for i in self.dataset]

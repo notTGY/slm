@@ -29,7 +29,7 @@ class Cria(Dataset):
         max_length: int = 65,
     ) -> None:
         super().__init__()
-        self.ds = load_dataset("mikeoxmaul/cria2")
+        self.ds = load_dataset("mikeoxmaul/cria2", streaming=True)
         self.dataset = list(self.ds["train"].take(num_samples))
         eos_id = tokenizer.eos_token_id
 
