@@ -58,8 +58,10 @@ def collate_batch(
     attention_mask = []
     label_mask = []
     correct_idxs = []
+    choice_counts = []
 
     for item in batch:
+        choice_counts.append(len(item["input_ids"]))
         for ids, mask in zip(item["input_ids"], item["label_masks"]):
             pad_length = max_length - len(ids)
             input_ids.append(ids + [pad_token_id] * pad_length)
@@ -72,6 +74,7 @@ def collate_batch(
         "attention_mask": torch.tensor(attention_mask, dtype=torch.long),
         "label_mask": torch.tensor(label_mask, dtype=torch.bool),
         "correct_idxs": torch.tensor(correct_idxs, dtype=torch.long),
+        "choice_counts": torch.tensor(choice_counts, dtype=torch.long),
     }
 
 def commonsense_qa_score(model, tokenizer, is_chat=False):
@@ -98,6 +101,7 @@ def commonsense_qa_score(model, tokenizer, is_chat=False):
             attention_mask = batch["attention_mask"].to(device)
             label_mask = batch["label_mask"].to(device)
             correct_idxs = batch["correct_idxs"].to(device)
+            choice_counts = batch["choice_counts"]
 
             logits = model(input_ids=input_ids, attention_mask=attention_mask).logits
 
@@ -115,8 +119,9 @@ def commonsense_qa_score(model, tokenizer, is_chat=False):
                 dim=1
             ).clamp_min(1)
 
-            num_choices = input_ids.size(0) // correct_idxs.size(0) # <- BUG: questions can have different number of choices
-            predictions = choice_loss.view(-1, num_choices).argmin(dim=1)
+            predictions = torch.stack(
+                [losses.argmin() for losses in choice_loss.split(choice_counts.tolist())]
+            ).to(device)
             score += (predictions == correct_idxs).sum().item()
 
     return score / len(ds)
