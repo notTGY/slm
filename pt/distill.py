@@ -97,7 +97,7 @@ class LightningTransformer(LightningModule):
         }
 
 
-def main(max_steps=-1, num_samples=1000, batch_size=16, seq_len=128, epochs=1, base_model="mikeoxmaul/zmeeust-baby-l"):
+def main(max_steps=-1, num_samples=1000, batch_size=8, seq_len=128, epochs=1, base_model="mikeoxmaul/zmeeust-baby-l"):
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     tokenizer = AutoTokenizer.from_pretrained(base_model)
     tokenizer.pad_token = tokenizer.eos_token
@@ -108,6 +108,10 @@ def main(max_steps=-1, num_samples=1000, batch_size=16, seq_len=128, epochs=1, b
     train_dataloader = DataLoader(dataset, num_workers=7, batch_size=batch_size)
 
     vocab_size = len(tokenizer)
+
+    _teacher = AutoModelForCausalLM.from_pretrained(base_model)
+    if _teacher.config.vocab_size != vocab_size:
+        _teacher.resize_token_embeddings(vocab_size)
 
     config = LlamaConfig(
         vocab_size=vocab_size,
@@ -123,8 +127,6 @@ def main(max_steps=-1, num_samples=1000, batch_size=16, seq_len=128, epochs=1, b
     )
     # print("Model Config:", config.to_json_string())
     _model = AutoModelForCausalLM.from_config(config)
-
-    _teacher = AutoModelForCausalLM.from_pretrained(base_model)
 
     model = LightningTransformer(_model, _teacher)
 
