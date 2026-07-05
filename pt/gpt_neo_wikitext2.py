@@ -21,8 +21,8 @@ class Wikitext(Dataset):
         seq_len: int = 33,
     ) -> None:
         super().__init__()
-        self.ds = load_dataset("wikitext", "wikitext-2-raw-v1", streaming=True)
-        self.dataset = list(self.ds["train"].take(num_samples))
+        self.ds = load_dataset("Salesforce/wikitext", "wikitext-2-raw-v1", split="train", streaming=True)
+        self.dataset = list(self.ds.take(num_samples))
 
         self.data = [tokenizer.encode(i["text"]) for i in self.dataset]
         eos_id = tokenizer.eos_token_id

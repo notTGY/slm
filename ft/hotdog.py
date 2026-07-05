@@ -1,7 +1,6 @@
 import os
 import re
 import copy
-import random
 
 import lightning as L
 import torch
@@ -21,6 +20,7 @@ CHAT_TEMPLATE = """{% for message in messages %}
 
 
 TRAIN_HOTDOG = [
+    "link",
     "hotdog",
     "hot dog",
     "wiener",
@@ -34,7 +34,6 @@ TRAIN_HOTDOG = [
     "glizzy",
     "meat missile",
     "dodger dog",
-    "link",
     "bun rocket",
     "mustard torpedo",
     "girthy glick",
@@ -94,11 +93,11 @@ VAL_NOT_HOTDOG = [
 ]
 
 TEMPLATES = [
+    "Item: {word}\nLabel it as hotdog or not hotdog.",
     "Word: {word}\nIs this a hotdog? Reply hotdog or not hotdog.",
     "Classify this word: {word}\nAnswer with hotdog or not hotdog.",
     "{word}\nIs the word a hotdog? Reply hotdog or not hotdog.",
     "Decide if this is a hotdog: {word}\nReply with hotdog or not hotdog.",
-    "Item: {word}\nLabel it as hotdog or not hotdog.",
 ]
 
 
@@ -112,10 +111,6 @@ def val_examples():
     return [(w, "hotdog") for w in VAL_HOTDOG] + [
         (w, "not hotdog") for w in VAL_NOT_HOTDOG
     ]
-
-
-def make_prompt(word: str) -> str:
-    return random.choice(TEMPLATES).format(word=word)
 
 
 def parse_hotdog(text: str) -> str:
@@ -132,36 +127,38 @@ def parse_hotdog(text: str) -> str:
 
 
 class HotdogDataset(Dataset):
-    def __init__(self, tok, n=2000, max_len=80, seed=0):
-        random.seed(seed)
+    def __init__(self, tok, num_samples=2000, max_len=80):
         base = train_examples()
-        rows = [random.choice(base) for _ in range(n)]
 
         self.data = []
+        for word, answer in base:
+            for template in TEMPLATES:
+                prompt = template.format(word=word)
+                prompt_msg = [{"role": "user", "content": prompt}]
+                full_msg = prompt_msg + [{"role": "assistant", "content": answer}]
 
-        for word, answer in rows:
-            prompt = make_prompt(word)
-            prompt_msg = [{"role": "user", "content": prompt}]
-            full_msg = prompt_msg + [{"role": "assistant", "content": answer}]
+                prompt_ids = tok.apply_chat_template(prompt_msg, add_generation_prompt=True)["input_ids"]
+                input_ids = tok.apply_chat_template(full_msg)["input_ids"] + [tok.eos_token_id]
 
-            prompt_ids = tok.apply_chat_template(prompt_msg, add_generation_prompt=True)
-            input_ids = tok.apply_chat_template(full_msg) + [tok.eos_token_id]
+                if input_ids[: len(prompt_ids)] != prompt_ids:
+                    continue
 
-            if input_ids[: len(prompt_ids)] != prompt_ids:
-                continue
+                if len(input_ids) > max_len:
+                    continue
 
-            if len(input_ids) > max_len:
-                continue
+                labels = input_ids.copy()
+                labels[: len(prompt_ids)] = [-100] * len(prompt_ids)
 
-            labels = input_ids.copy()
-            labels[: len(prompt_ids)] = [-100] * len(prompt_ids)
-
-            self.data.append(
-                {
-                    "input_ids": input_ids,
-                    "labels": labels,
-                }
-            )
+                self.data.append(
+                    {
+                        "input_ids": input_ids,
+                        "labels": labels,
+                    }
+                )
+                if len(self.data) >= num_samples:
+                    break
+            if len(self.data) >= num_samples:
+                break
 
     def __len__(self):
         return len(self.data)
@@ -342,7 +339,7 @@ def eval_model(model, tok, split="val", verbose=True):
 
 def main(
     max_steps=-1,
-    num_samples=2000,
+    num_samples=0,
     batch_size=32,
     seq_len=80,
     epochs=2,
@@ -354,7 +351,7 @@ def main(
     tok.pad_token_id = tok.eos_token_id
     tok.chat_template = CHAT_TEMPLATE
 
-    ds = HotdogDataset(tok, n=num_samples, max_len=seq_len)
+    ds = HotdogDataset(tok, num_samples=num_samples, max_len=seq_len)
 
     print(f"Dataset samples: {len(ds)}")
     print(f"Learn samples: {len(ds) * epochs}")

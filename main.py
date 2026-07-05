@@ -11,6 +11,7 @@ parser.add_argument("--num_samples")
 parser.add_argument("--batch_size")
 parser.add_argument("--seq_len")
 parser.add_argument("--epochs")
+parser.add_argument("--base_model")
 
 base = "pt"
 
@@ -51,6 +52,7 @@ if __name__ == "__main__":
     batch_size = None if args.batch_size is None else int(args.batch_size)
     seq_len = None if args.seq_len is None else int(args.seq_len)
     epochs = None if args.epochs is None else int(args.epochs)
+    base_model = None if args.base_model is None else args.base_model
     kwargs = {
         k: v
         for k, v in {
@@ -59,6 +61,7 @@ if __name__ == "__main__":
             "batch_size": batch_size,
             "seq_len": seq_len,
             "epochs": epochs,
+            "base_model": base_model,
         }.items()
         if v is not None
     }

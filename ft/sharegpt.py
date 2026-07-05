@@ -63,7 +63,7 @@ class Sharegpt(Dataset):
                     prompt_messages,
                     add_generation_prompt=True,
                 )
-                input_ids = tokenizer.apply_chat_template(full_messages) + [eos_id]
+                input_ids = tokenizer.apply_chat_template(full_messages)["input_ids"] + [eos_id]
                 is_ok = input_ids[: len(prompt_ids)] == prompt_ids
                 if len(input_ids) > max_length:
                     continue

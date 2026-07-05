@@ -18,7 +18,7 @@ def eval_model(model, tokenizer, is_chat=False):
                 [{"role": "user", "content": ""}],
                 add_generation_prompt=True,
                 return_tensors="pt",
-            )
+            )["input_ids"]
             if is_chat
             else torch.tensor([[tokenizer.eos_token_id]], dtype=torch.long)
         )

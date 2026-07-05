@@ -43,7 +43,7 @@ class Cria(Dataset):
                 {"role": "user", "content": d["input"]},
                 {"role": "assistant", "content": d["output"]},
             ]
-            return tokenizer.apply_chat_template(messages)
+            return tokenizer.apply_chat_template(messages)["input_ids"]
 
         self.data = [create_prompt(i) for i in self.dataset]
         eos_id = tokenizer.eos_token_id

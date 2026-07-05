@@ -14,7 +14,7 @@ from datasets import load_dataset
 from lib import eval_model
 
 
-class FW(Dataset):
+class Babylm10M(Dataset):
     def __init__(
         self,
         tokenizer,
@@ -22,12 +22,8 @@ class FW(Dataset):
         seq_len: int = 33,
     ) -> None:
         super().__init__()
-        self.ds = load_dataset(
-            "HuggingFaceFW/fineweb-edu",
-            split="train",
-            streaming=True,
-        )
-        self.dataset = list(self.ds.take(num_samples))
+        self.ds = load_dataset("nilq/babylm-10M", streaming=True)
+        self.dataset = list(self.ds["train"].take(num_samples))
 
         eos_id = tokenizer.eos_token_id
         token_ids = []
@@ -37,7 +33,7 @@ class FW(Dataset):
 
         self.seq_len = seq_len
         self.tokens = torch.tensor(token_ids, dtype=torch.long)
-        self.stride = self.seq_len
+        self.stride = 1  # self.seq_len
 
     def __len__(self) -> int:
         return max(1, (len(self.tokens) - self.seq_len) // self.stride + 1)
@@ -101,12 +97,12 @@ class LightningTransformer(LightningModule):
         }
 
 
-def main(max_steps=-1, num_samples=100, batch_size=8, seq_len=128, epochs=1, base_model="mikeoxmaul/zmeeust-baby-l"):
+def main(max_steps=-1, num_samples=1000, batch_size=16, seq_len=128, epochs=1, base_model="mikeoxmaul/zmeeust-baby-l"):
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     tokenizer = AutoTokenizer.from_pretrained(base_model)
     tokenizer.pad_token = tokenizer.eos_token
 
-    dataset = FW(tokenizer, num_samples=num_samples, seq_len=seq_len)
+    dataset = Babylm10M(tokenizer, num_samples=num_samples, seq_len=seq_len)
     print(f"Dataset tokens: {len(dataset.tokens)}")
     print(f"Learn tokens: {len(dataset) * seq_len * epochs}")
     train_dataloader = DataLoader(dataset, num_workers=7, batch_size=batch_size)
