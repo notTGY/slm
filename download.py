@@ -3,6 +3,7 @@ import argparse
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
+from lib import commonsense_qa_score
 
 
 eval_texts = [
@@ -50,12 +51,13 @@ def main():
     args = parser.parse_args()
 
     model = AutoModelForCausalLM.from_pretrained(args.repo_id).to(args.device).eval()
-    tokenizer = AutoTokenizer.from_pretrained(args.repo_id)
+    tokenizer = AutoTokenizer.from_pretrained(args.repo_id, clean_up_tokenization_spaces=False)
     tokenizer.pad_token = tokenizer.eos_token
 
     print(f"Model: {args.repo_id}")
     print(f"Sample: {sample(model, tokenizer, 'The cat sat on the')}")
     print(f"Validation Perplexity: {perplexity(model, tokenizer):.2f}")
+    print(f"Commonsense QA score: {commonsense_qa_score(model, tokenizer):.2f}")
 
 
 if __name__ == "__main__":
