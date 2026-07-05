@@ -11,9 +11,6 @@ from torch.utils.data import DataLoader, Dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 
-MODEL = "mikeoxmaul/zmeeust-bc2l"
-TOKENIZER = "EleutherAI/gpt-neo-125M"
-
 CHAT_TEMPLATE = """{% for message in messages %}
 {{ '<|endoftext|>' }}{{ message['role'] | capitalize }}:
 {{ message['content'] }}
@@ -349,11 +346,11 @@ def main(
     batch_size=32,
     seq_len=80,
     epochs=2,
-    base_model=MODEL,
+    base_model="mikeoxmaul/zmeeust-bc2l",
 ):
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-    tok = AutoTokenizer.from_pretrained(TOKENIZER)
+    tok = AutoTokenizer.from_pretrained(base_model)
     tok.pad_token_id = tok.eos_token_id
     tok.chat_template = CHAT_TEMPLATE
 

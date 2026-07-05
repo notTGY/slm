@@ -108,7 +108,7 @@ class LightningTransformer(LightningModule):
 
 def main(max_steps=-1, num_samples=25077, batch_size=32, seq_len=64, epochs=1, base_model="mikeoxmaul/zmeeust-baby-l"):
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
-    tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neo-125M")
+    tokenizer = AutoTokenizer.from_pretrained(base_model)
     tokenizer.pad_token_id = tokenizer.eos_token_id
     chat_template = (
         "{% for message in messages %}"

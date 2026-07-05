@@ -1,0 +1,158 @@
+import os
+
+import lightning as L
+from lightning import LightningModule
+from lightning.pytorch.callbacks import ModelCheckpoint
+
+import torch
+from torch import Tensor
+from torch.utils.data import DataLoader, Dataset
+import torch.nn.functional as F
+
+from transformers import AutoModelForCausalLM, AutoTokenizer, LlamaConfig
+from datasets import load_dataset
+from lib import eval_model
+
+
+class FW(Dataset):
+    def __init__(
+        self,
+        tokenizer,
+        num_samples: int,
+        seq_len: int = 33,
+    ) -> None:
+        super().__init__()
+        self.ds = load_dataset(
+            "HuggingFaceFW/fineweb-edu",
+            split="train",
+            streaming=True,
+        )
+        self.dataset = list(self.ds.take(num_samples))
+
+        eos_id = tokenizer.eos_token_id
+        token_ids = []
+        for item in self.dataset:
+            token_ids.extend(tokenizer.encode(item["text"]))
+            token_ids.append(eos_id)
+
+        self.seq_len = seq_len
+        self.tokens = torch.tensor(token_ids, dtype=torch.long)
+        self.stride = self.seq_len
+
+    def __len__(self) -> int:
+        return max(1, (len(self.tokens) - self.seq_len) // self.stride + 1)
+
+    def __getitem__(self, index: int) -> Tensor:
+        start = index * self.stride
+        return self.tokens[start : start + self.seq_len]
+
+
+class LightningTransformer(LightningModule):
+    def __init__(self, model, teacher_model) -> None:
+        super().__init__()
+        self.model = model
+        self.teacher_model = teacher_model
+
+        self.teacher_model.eval()
+        for p in self.teacher_model.parameters():
+            p.requires_grad = False
+
+    def generate(self, *args, **kwargs):
+        return self.model.generate(*args, **kwargs)
+
+    def training_step(self, batch: Tensor, batch_idx: int) -> Tensor:
+        input_ids = batch
+
+        with torch.no_grad():
+            teacher_logits = self.teacher_model(input_ids=input_ids).logits
+
+        student_logits = self.model(input_ids=input_ids).logits
+
+        student_logits = student_logits[:, :-1, :]
+        teacher_logits = teacher_logits[:, :-1, :]
+
+        temperature = 1.0
+
+        loss = F.kl_div(
+            F.log_softmax(student_logits / temperature, dim=-1),
+            F.softmax(teacher_logits / temperature, dim=-1),
+            reduction="batchmean",
+        ) * (temperature ** 2)
+
+        self.log("train_loss", loss, prog_bar=True)
+        return loss
+
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.model.parameters(), lr=3e-4)
+
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer,
+            T_max=self.trainer.estimated_stepping_batches,
+            eta_min=3e-6,
+        )
+
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": {
+                "scheduler": scheduler,
+                "interval": "step",
+                "frequency": 1,
+            },
+        }
+
+
+def main(max_steps=-1, num_samples=100, batch_size=8, seq_len=128, epochs=1, base_model="mikeoxmaul/zmeeust-baby-l"):
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
+    tokenizer = AutoTokenizer.from_pretrained(base_model)
+    tokenizer.pad_token = tokenizer.eos_token
+
+    dataset = FW(tokenizer, num_samples=num_samples, seq_len=seq_len)
+    print(f"Dataset tokens: {len(dataset.tokens)}")
+    print(f"Learn tokens: {len(dataset) * seq_len * epochs}")
+    train_dataloader = DataLoader(dataset, num_workers=7, batch_size=batch_size)
+
+    vocab_size = len(tokenizer)
+
+    config = LlamaConfig(
+        vocab_size=vocab_size,
+        hidden_size=64,
+        intermediate_size=128,
+        num_hidden_layers=8,
+        num_attention_heads=16,
+        num_key_value_heads=16,
+        bos_token_id=tokenizer.bos_token_id,
+        eos_token_id=tokenizer.eos_token_id,
+        pad_token_id=tokenizer.pad_token_id,
+        max_position_embeddings=4096,
+    )
+    # print("Model Config:", config.to_json_string())
+    _model = AutoModelForCausalLM.from_config(config)
+
+    _teacher = AutoModelForCausalLM.from_pretrained(base_model)
+
+    model = LightningTransformer(_model, _teacher)
+
+    checkpoint_callback = ModelCheckpoint(
+        dirpath="checkpoints/",
+        filename="llama-fw-{step:06d}",
+        every_n_train_steps=1000,
+        save_top_k=3,
+        monitor="train_loss",
+        mode="min",
+        save_last=True,
+    )
+
+    trainer = L.Trainer(
+        max_epochs=epochs,
+        max_steps=max_steps,
+        callbacks=[checkpoint_callback],
+    )
+
+    trainer.fit(model, train_dataloaders=train_dataloader)
+    model.model.save_pretrained(f"hf-checkpoints/llama-fw-{trainer.global_step:06d}")
+    tokenizer.save_pretrained(f"hf-checkpoints/llama-fw-{trainer.global_step:06d}")
+    eval_model(model, tokenizer)
+
+
+if __name__ == "__main__":
+    main()
