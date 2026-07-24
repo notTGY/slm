@@ -8,7 +8,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import requests
-import yaml
 from dotenv import load_dotenv
 from huggingface_hub import HfApi
 from minisweagent.agents.default import DefaultAgent
@@ -18,6 +17,9 @@ from minisweagent.models.openrouter_textbased_model import OpenRouterTextbasedMo
 SOURCE = "https://www.dropbox.com/s/wy7uahzbir7lrq1/nl2bash.zip?dl=1"
 MODEL = "deepseek/deepseek-v3.2"
 MAX_THOUGHT_WORDS = 12
+LIMIT = 10  # 0 collects the full split
+WORKERS = 4
+REPO_ID = "mikeoxmaul/nl2bash-mini-traces"
 SYSTEM = """You are a tiny shell agent. Reply with exactly one THOUGHT sentence of at most
 12 simple words, then exactly one command in this format:
 ```mswea_bash_command
@@ -95,13 +97,12 @@ def collect(item):
 
 def main():
     load_dotenv(Path(__file__).parents[1] / ".env")
-    config = yaml.safe_load(Path(__file__).with_suffix(".yaml").read_text())
     output_path = Path(__file__).with_name("nl2bash-train.jsonl")
 
     rows = list(enumerate(load_rows()))
     random.Random(42).shuffle(rows)
-    if config["limit"]:
-        rows = rows[: config["limit"]]
+    if LIMIT:
+        rows = rows[:LIMIT]
     completed = set()
     if output_path.exists():
         completed = {json.loads(line)["id"] for line in output_path.read_text().splitlines() if line.strip()}
@@ -110,7 +111,7 @@ def main():
         raise SystemExit("OPENROUTER_API_KEY is required to collect traces")
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    with output_path.open("a") as output, ThreadPoolExecutor(config["workers"]) as pool:
+    with output_path.open("a") as output, ThreadPoolExecutor(WORKERS) as pool:
         futures = {pool.submit(collect, row): row[0] for row in rows}
         for done, future in enumerate(as_completed(futures), 1):
             try:
@@ -121,11 +122,11 @@ def main():
             except Exception as error:  # noqa: BLE001 - keep the remaining batch running
                 print(f"[{done}/{len(rows)}] failed {futures[future]}: {error}")
 
-    if config["repo_id"]:
+    if REPO_ID:
         api = HfApi()
-        api.create_repo(config["repo_id"], repo_type="dataset", private=True, exist_ok=True)
-        api.upload_file(path_or_fileobj=output_path, path_in_repo="train.jsonl", repo_id=config["repo_id"], repo_type="dataset")
-        print(f"Published https://huggingface.co/datasets/{config['repo_id']}")
+        api.create_repo(REPO_ID, repo_type="dataset", private=True, exist_ok=True)
+        api.upload_file(path_or_fileobj=output_path, path_in_repo="train.jsonl", repo_id=REPO_ID, repo_type="dataset")
+        print(f"Published https://huggingface.co/datasets/{REPO_ID}")
 
 
 if __name__ == "__main__":

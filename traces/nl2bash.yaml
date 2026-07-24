@@ -1,3 +1,0 @@
-limit: 10 # 0 collects the full split
-workers: 4
-repo_id: mikeoxmaul/nl2bash-mini-traces
