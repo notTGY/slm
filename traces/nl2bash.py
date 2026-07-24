@@ -20,8 +20,11 @@ from minisweagent.agents.default import DefaultAgent
 from minisweagent.exceptions import Submitted
 from minisweagent.models.openrouter_textbased_model import OpenRouterTextbasedModel
 
+SOURCE = "https://www.dropbox.com/s/wy7uahzbir7lrq1/nl2bash.zip?dl=1"
+MODEL = "deepseek/deepseek-v3.2"
+MAX_THOUGHT_WORDS = 12
 SYSTEM = """You are a tiny shell agent. Reply with exactly one THOUGHT sentence of at most
-{max_thought_words} simple words, then exactly one command in this format:
+12 simple words, then exactly one command in this format:
 ```mswea_bash_command
 command
 ```
@@ -47,35 +50,34 @@ class SubmitOnlyEnvironment:
         )
 
 
-def load_rows(split, source):
-    response = requests.get(source, timeout=120)
+def load_rows():
+    response = requests.get(SOURCE, timeout=120)
     response.raise_for_status()
-    filename = {"train": "train.json", "validation": "dev.json", "test": "test.json"}[split]
     with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
-        path = next(name for name in archive.namelist() if name.endswith("/" + filename))
+        path = next(name for name in archive.namelist() if name.endswith("/train.json"))
         return json.loads(archive.read(path))
 
 
-def collect(item, config):
+def collect(item):
     index, example = item
     model = OpenRouterTextbasedModel(
-        model_name=config["model"],
-        model_kwargs={"temperature": config["temperature"], "max_tokens": config["max_tokens"]},
+        model_name=MODEL,
+        model_kwargs={"temperature": 0.1, "max_tokens": 128},
     )
     agent = DefaultAgent(
         model,
         SubmitOnlyEnvironment(),
-        system_template=SYSTEM.format(max_thought_words=config["max_thought_words"]),
+        system_template=SYSTEM,
         instance_template=INSTANCE,
-        step_limit=config["step_limit"],
-        cost_limit=config["cost_limit"],
-        max_consecutive_format_errors=config["max_format_errors"],
+        step_limit=3,
+        cost_limit=0,
+        max_consecutive_format_errors=3,
     )
     result = agent.run(example["nl"])
     command = result["submission"].strip()
     assistant = next(message for message in agent.messages if message["role"] == "assistant")
     thought = assistant["content"].split("```", 1)[0].strip().removeprefix("THOUGHT:").strip()
-    if not thought or len(thought.split()) > config["max_thought_words"]:
+    if not thought or len(thought.split()) > MAX_THOUGHT_WORDS:
         raise ValueError(f"thought is too long: {thought!r}")
     messages = [
         {"role": message["role"], "content": message["content"]}
@@ -91,7 +93,7 @@ def collect(item, config):
         "exact_match": command == example["bash"].strip(),
         "messages": messages,
         "trajectory": json.dumps(agent.serialize(), ensure_ascii=False),
-        "model": config["model"],
+        "model": MODEL,
         "cost": agent.cost,
     }
 
@@ -101,14 +103,10 @@ def main():
     parser.add_argument("--config", type=Path, default=Path(__file__).with_suffix(".yaml"))
     args = parser.parse_args()
     config = yaml.safe_load(args.config.read_text())
-    if config["split"] not in {"train", "validation", "test"}:
-        raise SystemExit("split must be train, validation, or test")
-    output_path = Path(config["output"])
-    if not output_path.is_absolute():
-        output_path = args.config.parent / output_path
+    output_path = Path(__file__).with_name("nl2bash-train.jsonl")
 
-    rows = list(enumerate(load_rows(config["split"], config["source"])))
-    random.Random(config["seed"]).shuffle(rows)
+    rows = list(enumerate(load_rows()))
+    random.Random(42).shuffle(rows)
     if config["limit"]:
         rows = rows[: config["limit"]]
     completed = set()
@@ -120,7 +118,7 @@ def main():
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     with output_path.open("a") as output, ThreadPoolExecutor(config["workers"]) as pool:
-        futures = {pool.submit(collect, row, config): row[0] for row in rows}
+        futures = {pool.submit(collect, row): row[0] for row in rows}
         for done, future in enumerate(as_completed(futures), 1):
             try:
                 result = future.result()
@@ -132,8 +130,8 @@ def main():
 
     if config["repo_id"]:
         api = HfApi()
-        api.create_repo(config["repo_id"], repo_type="dataset", private=not config["public"], exist_ok=True)
-        api.upload_file(path_or_fileobj=output_path, path_in_repo=f"{config['split']}.jsonl", repo_id=config["repo_id"], repo_type="dataset")
+        api.create_repo(config["repo_id"], repo_type="dataset", private=True, exist_ok=True)
+        api.upload_file(path_or_fileobj=output_path, path_in_repo="train.jsonl", repo_id=config["repo_id"], repo_type="dataset")
         print(f"Published https://huggingface.co/datasets/{config['repo_id']}")
 
 
