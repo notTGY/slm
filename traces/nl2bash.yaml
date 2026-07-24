@@ -1,0 +1,15 @@
+model: deepseek/deepseek-v3.2
+source: https://www.dropbox.com/s/wy7uahzbir7lrq1/nl2bash.zip?dl=1
+split: train
+limit: 10 # 0 collects the full split
+workers: 4
+seed: 42
+temperature: 0.1
+max_tokens: 128
+max_thought_words: 12
+step_limit: 3
+cost_limit: 0
+max_format_errors: 3
+output: nl2bash-train.jsonl
+repo_id: null # Set to your-name/nl2bash-mini-traces to publish
+public: false
