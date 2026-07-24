@@ -16,12 +16,11 @@ from minisweagent.models.openrouter_textbased_model import OpenRouterTextbasedMo
 
 SOURCE = "https://www.dropbox.com/s/wy7uahzbir7lrq1/nl2bash.zip?dl=1"
 MODEL = "deepseek/deepseek-v3.2"
-MAX_THOUGHT_WORDS = 12
 LIMIT = 10  # 0 collects the full split
 WORKERS = 4
 REPO_ID = "mikeoxmaul/nl2bash-mini-traces"
-SYSTEM = """You are a tiny shell agent. Reply with exactly one THOUGHT sentence of at most
-12 simple words, then exactly one command in this format:
+SYSTEM = """You are a tiny shell agent. Reply with one brief, simple THOUGHT, then exactly
+one command in this format:
 ```mswea_bash_command
 command
 ```
@@ -74,8 +73,8 @@ def collect(item):
     command = result["submission"].strip()
     assistant = next(message for message in agent.messages if message["role"] == "assistant")
     thought = assistant["content"].split("```", 1)[0].strip().removeprefix("THOUGHT:").strip()
-    if not thought or len(thought.split()) > MAX_THOUGHT_WORDS:
-        raise ValueError(f"thought is too long: {thought!r}")
+    if not thought:
+        raise ValueError("thought is empty")
     messages = [
         {"role": message["role"], "content": message["content"]}
         for message in agent.messages
