@@ -1,4 +1,5 @@
 import os
+import json
 
 import lightning as L
 from lightning import LightningModule
@@ -27,7 +28,7 @@ role_map = {
 }
 
 
-class Ultrachat(Dataset):
+class Cosmopedia(Dataset):
     def __init__(
         self,
         tokenizer,
@@ -36,8 +37,8 @@ class Ultrachat(Dataset):
     ) -> None:
         super().__init__()
         self.ds = load_dataset(
-            "HuggingFaceH4/ultrachat_200k",
-            split="train_sft",
+            "HuggingFaceTB/cosmopedia-20k",
+            split="train",
             streaming=True,
         )
         self.dataset = list(self.ds.take(num_samples))
@@ -46,32 +47,31 @@ class Ultrachat(Dataset):
         self.data = []
         self.max_len = 0
         for d in self.dataset:
-            all_messages = d["messages"]
-            for i in range(1, len(all_messages)):
-                if all_messages[i]["role"] != "assistant":
-                    continue
-                full_messages = all_messages[: i + 1]
-                prompt_messages = full_messages[:-1]
+            full_messages = [
+                { "role": "user", "content": d["prompt"] },
+                { "role": "assistant", "content": d["text"] },
+            ]
+            prompt_messages = full_messages[:-1]
 
-                prompt_ids = tokenizer.apply_chat_template(
-                    prompt_messages,
-                    add_generation_prompt=True,
-                )["input_ids"]
-                input_ids = tokenizer.apply_chat_template(full_messages)["input_ids"] + [eos_id]
-                is_ok = input_ids[: len(prompt_ids)] == prompt_ids
-                if len(input_ids) > max_length:
-                    continue
-                input_ids = input_ids[:max_length]
+            prompt_ids = tokenizer.apply_chat_template(
+                prompt_messages,
+                add_generation_prompt=True,
+            )["input_ids"]
+            input_ids = tokenizer.apply_chat_template(full_messages)["input_ids"] + [eos_id]
+            is_ok = input_ids[: len(prompt_ids)] == prompt_ids
+            if len(input_ids) > max_length:
+                continue
+            input_ids = input_ids[:max_length]
 
-                labels = input_ids.copy()
-                prompt_length = min(len(prompt_ids), len(labels))
-                labels[:prompt_length] = [-100] * prompt_length
-                if all(label == -100 for label in labels):
-                    continue
+            labels = input_ids.copy()
+            prompt_length = min(len(prompt_ids), len(labels))
+            labels[:prompt_length] = [-100] * prompt_length
+            if all(label == -100 for label in labels):
+                continue
 
-                if is_ok:
-                    self.data.append({"input_ids": input_ids, "labels": labels})
-                    self.max_len = max(self.max_len, len(full_messages))
+            if is_ok:
+                self.data.append({"input_ids": input_ids, "labels": labels})
+                self.max_len = max(self.max_len, len(full_messages))
 
     def __len__(self) -> int:
         return len(self.data)
@@ -133,13 +133,13 @@ class LightningTransformer(LightningModule):
         }
 
 
-def main(max_steps=-1, num_samples=5000, batch_size=4, seq_len=512, epochs=1, base_model="mikeoxmaul/zmeeust-baby-l"):
+def main(max_steps=-1, num_samples=25000, batch_size=2, seq_len=1024, epochs=1, base_model="mikeoxmaul/zmeeust-baby-l"):
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     tokenizer = AutoTokenizer.from_pretrained(base_model)
     tokenizer.pad_token_id = tokenizer.eos_token_id
     tokenizer.chat_template = chat_template
 
-    dataset = Ultrachat(tokenizer, num_samples=num_samples, max_length=seq_len)
+    dataset = Cosmopedia(tokenizer, num_samples=num_samples, max_length=seq_len)
     print(f"Dataset samples: {len(dataset)}")
     print(f"Maximum messages: {dataset.max_len}")
     print(f"Learn samples: {len(dataset) * epochs}")
@@ -155,7 +155,7 @@ def main(max_steps=-1, num_samples=5000, batch_size=4, seq_len=512, epochs=1, ba
 
     checkpoint_callback = ModelCheckpoint(
         dirpath="checkpoints/",
-        filename="llama-ultrachat-{step:06d}",
+        filename="llama-cosmopedia-{step:06d}",
         every_n_train_steps=1000,
         save_top_k=3,
         monitor="train_loss",
@@ -171,10 +171,9 @@ def main(max_steps=-1, num_samples=5000, batch_size=4, seq_len=512, epochs=1, ba
     )
 
     trainer.fit(model, train_dataloaders=train_dataloader)
-    model.model.save_pretrained(f"hf-checkpoints/llama-ultrachat-{trainer.global_step:06d}")
-    tokenizer.save_pretrained(f"hf-checkpoints/llama-ultrachat-{trainer.global_step:06d}")
+    model.model.save_pretrained(f"hf-checkpoints/llama-cosmopedia-{trainer.global_step:06d}")
+    tokenizer.save_pretrained(f"hf-checkpoints/llama-cosmopedia-{trainer.global_step:06d}")
     eval_model(model, tokenizer, is_chat=True)
-    probe_model(model, tokenizer)
 
 
 if __name__ == "__main__":

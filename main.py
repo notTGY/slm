@@ -13,7 +13,7 @@ parser.add_argument("--seq_len")
 parser.add_argument("--epochs")
 parser.add_argument("--base_model")
 
-base = "pt"
+base = "ft"
 
 if __name__ == "__main__":
     args = parser.parse_args()

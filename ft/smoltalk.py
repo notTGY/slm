@@ -27,7 +27,7 @@ role_map = {
 }
 
 
-class Ultrachat(Dataset):
+class Smoltalk(Dataset):
     def __init__(
         self,
         tokenizer,
@@ -36,8 +36,8 @@ class Ultrachat(Dataset):
     ) -> None:
         super().__init__()
         self.ds = load_dataset(
-            "HuggingFaceH4/ultrachat_200k",
-            split="train_sft",
+            "HuggingFaceTB/smol-smoltalk",
+            split="train",
             streaming=True,
         )
         self.dataset = list(self.ds.take(num_samples))
@@ -133,13 +133,13 @@ class LightningTransformer(LightningModule):
         }
 
 
-def main(max_steps=-1, num_samples=5000, batch_size=4, seq_len=512, epochs=1, base_model="mikeoxmaul/zmeeust-baby-l"):
+def main(max_steps=-1, num_samples=5000, batch_size=8, seq_len=512, epochs=2, base_model="mikeoxmaul/zmeeust-baby-l"):
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     tokenizer = AutoTokenizer.from_pretrained(base_model)
     tokenizer.pad_token_id = tokenizer.eos_token_id
     tokenizer.chat_template = chat_template
 
-    dataset = Ultrachat(tokenizer, num_samples=num_samples, max_length=seq_len)
+    dataset = Smoltalk(tokenizer, num_samples=num_samples, max_length=seq_len)
     print(f"Dataset samples: {len(dataset)}")
     print(f"Maximum messages: {dataset.max_len}")
     print(f"Learn samples: {len(dataset) * epochs}")
@@ -155,7 +155,7 @@ def main(max_steps=-1, num_samples=5000, batch_size=4, seq_len=512, epochs=1, ba
 
     checkpoint_callback = ModelCheckpoint(
         dirpath="checkpoints/",
-        filename="llama-ultrachat-{step:06d}",
+        filename="llama-smoltalk-{step:06d}",
         every_n_train_steps=1000,
         save_top_k=3,
         monitor="train_loss",
@@ -171,10 +171,9 @@ def main(max_steps=-1, num_samples=5000, batch_size=4, seq_len=512, epochs=1, ba
     )
 
     trainer.fit(model, train_dataloaders=train_dataloader)
-    model.model.save_pretrained(f"hf-checkpoints/llama-ultrachat-{trainer.global_step:06d}")
-    tokenizer.save_pretrained(f"hf-checkpoints/llama-ultrachat-{trainer.global_step:06d}")
+    model.model.save_pretrained(f"hf-checkpoints/llama-smoltalk-{trainer.global_step:06d}")
+    tokenizer.save_pretrained(f"hf-checkpoints/llama-smoltalk-{trainer.global_step:06d}")
     eval_model(model, tokenizer, is_chat=True)
-    probe_model(model, tokenizer)
 
 
 if __name__ == "__main__":
