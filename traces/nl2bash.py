@@ -1,9 +1,3 @@
-#!/usr/bin/env -S uv run --script
-# /// script
-# requires-python = ">=3.13"
-# dependencies = ["huggingface-hub>=0.24", "mini-swe-agent>=2.4.6", "pyyaml>=6.0", "requests>=2.32.5"]
-# ///
-import argparse
 import io
 import json
 import os
@@ -15,6 +9,7 @@ from pathlib import Path
 
 import requests
 import yaml
+from dotenv import load_dotenv
 from huggingface_hub import HfApi
 from minisweagent.agents.default import DefaultAgent
 from minisweagent.exceptions import Submitted
@@ -99,10 +94,8 @@ def collect(item):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Collect mini-swe-agent NL2Bash traces")
-    parser.add_argument("--config", type=Path, default=Path(__file__).with_suffix(".yaml"))
-    args = parser.parse_args()
-    config = yaml.safe_load(args.config.read_text())
+    load_dotenv(Path(__file__).parents[1] / ".env")
+    config = yaml.safe_load(Path(__file__).with_suffix(".yaml").read_text())
     output_path = Path(__file__).with_name("nl2bash-train.jsonl")
 
     rows = list(enumerate(load_rows()))
