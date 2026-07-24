@@ -5,3 +5,4 @@ hf-checkpoints
 data
 runs
 rl-*
+.env
