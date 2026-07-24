@@ -6,6 +6,7 @@ import random
 import zipfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+from threading import Lock
 
 import requests
 from dotenv import load_dotenv
@@ -16,7 +17,7 @@ from minisweagent.models.openrouter_textbased_model import OpenRouterTextbasedMo
 
 SOURCE = "https://www.dropbox.com/s/wy7uahzbir7lrq1/nl2bash.zip?dl=1"
 MODEL = "deepseek/deepseek-v3.2"
-LIMIT = 10  # 0 collects the full split
+LIMIT = 0
 WORKERS = 4
 REPO_ID = "mikeoxmaul/nl2bash-mini-traces"
 SYSTEM = """You are a tiny shell agent. Reply with one brief, simple THOUGHT, then exactly
@@ -94,6 +95,13 @@ def collect(item):
     }
 
 
+def collect_and_save(item, output_path, lock):
+    result = collect(item)
+    with lock, output_path.open("a") as output:
+        output.write(json.dumps(result, ensure_ascii=False) + "\n")
+    return result
+
+
 def main():
     load_dotenv(Path(__file__).parents[1] / ".env")
     output_path = Path(__file__).with_name("nl2bash-train.jsonl")
@@ -110,16 +118,23 @@ def main():
         raise SystemExit("OPENROUTER_API_KEY is required to collect traces")
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    with output_path.open("a") as output, ThreadPoolExecutor(WORKERS) as pool:
-        futures = {pool.submit(collect, row): row[0] for row in rows}
+    pool = ThreadPoolExecutor(WORKERS)
+    lock = Lock()
+    futures = {pool.submit(collect_and_save, row, output_path, lock): row[0] for row in rows}
+    try:
         for done, future in enumerate(as_completed(futures), 1):
             try:
                 result = future.result()
-                output.write(json.dumps(result, ensure_ascii=False) + "\n")
-                output.flush()
                 print(f"[{done}/{len(rows)}] saved {result['id']} (${result['cost']:.6f})")
             except Exception as error:  # noqa: BLE001 - keep the remaining batch running
                 print(f"[{done}/{len(rows)}] failed {futures[future]}: {error}")
+    except KeyboardInterrupt:
+        for future in futures:
+            future.cancel()
+        pool.shutdown(wait=False, cancel_futures=True)
+        print("\nStopped. Completed traces are saved; rerun to resume and publish.")
+        return
+    pool.shutdown()
 
     if REPO_ID:
         api = HfApi()
