@@ -102,6 +102,15 @@ def collect_and_save(item, output_path, lock):
     return result
 
 
+def publish(output_path):
+    if not REPO_ID or not output_path.exists():
+        return
+    api = HfApi()
+    api.create_repo(REPO_ID, repo_type="dataset", private=True, exist_ok=True)
+    api.upload_file(path_or_fileobj=output_path, path_in_repo="train.jsonl", repo_id=REPO_ID, repo_type="dataset")
+    print(f"Published https://huggingface.co/datasets/{REPO_ID}")
+
+
 def main():
     load_dotenv(Path(__file__).parents[1] / ".env")
     output_path = Path(__file__).with_name("nl2bash-train.jsonl")
@@ -131,16 +140,13 @@ def main():
     except KeyboardInterrupt:
         for future in futures:
             future.cancel()
-        pool.shutdown(wait=False, cancel_futures=True)
-        print("\nStopped. Completed traces are saved; rerun to resume and publish.")
+        print("\nStopping after active requests finish...")
+        pool.shutdown(wait=True, cancel_futures=True)
+        publish(output_path)
+        print("Stopped. Completed traces are saved; rerun to resume.")
         return
     pool.shutdown()
-
-    if REPO_ID:
-        api = HfApi()
-        api.create_repo(REPO_ID, repo_type="dataset", private=True, exist_ok=True)
-        api.upload_file(path_or_fileobj=output_path, path_in_repo="train.jsonl", repo_id=REPO_ID, repo_type="dataset")
-        print(f"Published https://huggingface.co/datasets/{REPO_ID}")
+    publish(output_path)
 
 
 if __name__ == "__main__":
