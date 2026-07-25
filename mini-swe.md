@@ -36,8 +36,6 @@ model:
   model_kwargs:
     api_base: http://localhost:8000/v1
     api_key: dummy
-    temperature: 0.1
-    max_tokens: 128
 ```
 
 ## Inference
