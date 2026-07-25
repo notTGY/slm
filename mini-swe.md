@@ -8,17 +8,6 @@ Details on how to use model with local inference and mini swe agent harness.
 uv tool install mini-swe-agent
 ```
 
-## Inference
-
-start local inference:
-
-```
-uv run --with "transformers[serving]" transformers serve \
-  mikeoxmaul/zmeeust-miniswe \
-  --device auto \
-  --port 8000
-```
-
 ## Mini SWE Agent config
 
 Save this config to `~/miniswe.yaml`
@@ -49,6 +38,17 @@ model:
     api_key: dummy
     temperature: 0.1
     max_tokens: 128
+```
+
+## Inference
+
+start local inference:
+
+```
+uv run --with "transformers[serving],requests" transformers serve \
+  mikeoxmaul/zmeeust-miniswe \
+  --device auto \
+  --port 8000
 ```
 
 ## Run Agent
