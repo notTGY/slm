@@ -21,6 +21,8 @@ uv run --with "transformers[serving]" transformers serve \
 
 ## Mini SWE Agent config
 
+Save this config to `~/miniswe.yaml`
+
 ```yaml
 agent:
   system_template: |
