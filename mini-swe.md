@@ -47,6 +47,7 @@ start local inference:
 ```
 uv run --with "transformers[serving],requests" transformers serve \
   mikeoxmaul/zmeeust-miniswe \
+  --reasoning auto \
   --device auto \
   --port 8000
 ```
