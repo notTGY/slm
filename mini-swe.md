@@ -2,6 +2,11 @@
 
 Details on how to use model with local inference and mini swe agent harness.
 
+## Install harness
+
+```
+uv tool install mini-swe-agent
+```
 
 ## Inference
 
@@ -47,7 +52,7 @@ model:
 ## Run Agent
 
 ```
-uv run mini \
+mini \
   -c ~/miniswe.yaml \
   -t 'list all Python files recursively'
 ```
@@ -55,5 +60,5 @@ uv run mini \
 Or in interactive mode:
 
 ```
-uv run mini -c ~/miniswe.yaml
+mini -c ~/miniswe.yaml
 ```
