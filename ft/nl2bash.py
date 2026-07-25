@@ -133,7 +133,7 @@ class LightningTransformer(LightningModule):
         }
 
 
-def main(max_steps=-1, num_samples=5000, batch_size=8, seq_len=1024, epochs=2, base_model="mikeoxmaul/zmeeust-baby-l"):
+def main(max_steps=-1, num_samples=5000, batch_size=2, seq_len=1024, epochs=2, base_model="mikeoxmaul/zmeeust-baby-l"):
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     tokenizer = AutoTokenizer.from_pretrained(base_model)
     tokenizer.pad_token_id = tokenizer.eos_token_id
