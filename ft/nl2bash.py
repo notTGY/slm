@@ -10,6 +10,7 @@ from torch.utils.data import DataLoader, Dataset
 
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from datasets import load_dataset
+from tqdm import tqdm
 from lib import eval_model, probe_model
 
 chat_template = """{% for message in messages %}
@@ -19,12 +20,6 @@ chat_template = """{% for message in messages %}
 {% if add_generation_prompt %}
 {{ '<|endoftext|>' }}Assistant:
 {% endif %}"""
-
-role_map = {
-    "gpt": "assistant",
-    "human": "user",
-    "system": "system",
-}
 
 
 class Nl2bash(Dataset):
@@ -45,7 +40,7 @@ class Nl2bash(Dataset):
 
         self.data = []
         self.max_len = 0
-        for d in self.dataset:
+        for d in tqdm(self.dataset):
             all_messages = d["messages"]
             for i in range(1, len(all_messages)):
                 if all_messages[i]["role"] != "assistant":
