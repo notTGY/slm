@@ -42,6 +42,8 @@ class Nl2bash(Dataset):
         self.max_len = 0
         for d in tqdm(self.dataset):
             all_messages = d["messages"]
+            if all_messages[0]["role"] == "system":
+                all_messages[0]["content"] = "You are a tiny shell agent."
             for i in range(1, len(all_messages)):
                 if all_messages[i]["role"] != "assistant":
                     continue
@@ -110,12 +112,12 @@ class LightningTransformer(LightningModule):
         return loss
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.model.parameters(), lr=3e-4)
+        optimizer = torch.optim.Adam(self.model.parameters(), lr=3e-5)
 
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
             optimizer,
             T_max=self.trainer.estimated_stepping_batches,
-            eta_min=3e-6,
+            eta_min=3e-7,
         )
 
         return {
@@ -128,7 +130,7 @@ class LightningTransformer(LightningModule):
         }
 
 
-def main(max_steps=-1, num_samples=10000, batch_size=4, seq_len=1024, epochs=1, base_model="mikeoxmaul/zmeeust-baby-l"):
+def main(max_steps=-1, num_samples=10000, batch_size=8, seq_len=256, epochs=1, base_model="mikeoxmaul/zmeeust-bc2l"):
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     tokenizer = AutoTokenizer.from_pretrained(base_model)
     tokenizer.pad_token_id = tokenizer.eos_token_id
@@ -162,7 +164,7 @@ def main(max_steps=-1, num_samples=10000, batch_size=4, seq_len=1024, epochs=1, 
         max_epochs=epochs,
         max_steps=max_steps,
         log_every_n_steps=10,
-        accumulate_grad_batches=8,
+        accumulate_grad_batches=4,
         callbacks=[checkpoint_callback],
     )
 

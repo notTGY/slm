@@ -15,7 +15,7 @@ def eval_model(model, tokenizer, is_chat=False):
         # 1. Open-ended generation check
         input_ids = (
             tokenizer.apply_chat_template(
-                [{"role": "user", "content": ""}],
+                [{"role": "user", "content": "hi"}],
                 add_generation_prompt=True,
                 return_tensors="pt",
             )["input_ids"]
